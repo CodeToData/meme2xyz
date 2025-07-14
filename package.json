@@ -29,11 +29,14 @@
     "@types/react": "^19.1.8",
     "@types/react-dom": "^19.1.6",
     "@vitejs/plugin-react": "^4.6.0",
+    "@vitejs/plugin-react-swc": "^3.10.2",
     "concurrently": "^9.2.0",
+    "esbuild": "^0.25.6",
     "eslint": "^9.30.1",
     "eslint-plugin-react-hooks": "^5.2.0",
     "eslint-plugin-react-refresh": "^0.4.20",
     "globals": "^16.3.0",
-    "vite": "^7.0.3"
+    "vite": "^7.0.3",
+    "vite-plugin-webgpu": "^0.0.2"
   }
 }
