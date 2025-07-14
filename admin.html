@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Meme2XYZ - Admin Panel</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 2rem;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 3rem;
+        }
+
+        .header h1 {
+            color: white;
+            font-size: 3rem;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+            margin-bottom: 1rem;
+        }
+
+        .header p {
+            color: rgba(255, 255, 255, 0.9);
+            font-size: 1.2rem;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 1.5rem;
+            text-align: center;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .stat-number {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: white;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-label {
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 1rem;
+        }
+
+        .submissions {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 2rem;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .submissions h2 {
+            color: white;
+            font-size: 2rem;
+            margin-bottom: 2rem;
+            text-align: center;
+        }
+
+        .submission-card {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            display: grid;
+            grid-template-columns: 200px 1fr auto;
+            gap: 1.5rem;
+            align-items: center;
+        }
+
+        .submission-image {
+            width: 200px;
+            height: 150px;
+            object-fit: cover;
+            border-radius: 10px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .submission-details {
+            color: white;
+        }
+
+        .submission-text {
+            font-size: 1.1rem;
+            margin-bottom: 1rem;
+            line-height: 1.4;
+        }
+
+        .submission-meta {
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 0.9rem;
+        }
+
+        .submission-actions {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .btn {
+            padding: 0.8rem 1.5rem;
+            border: none;
+            border-radius: 25px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            text-align: center;
+        }
+
+        .btn-approve {
+            background: linear-gradient(45deg, #4caf50, #8bc34a);
+            color: white;
+        }
+
+        .btn-approve:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(76, 175, 80, 0.3);
+        }
+
+        .btn-reject {
+            background: linear-gradient(45deg, #f44336, #ff9800);
+            color: white;
+        }
+
+        .btn-reject:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(244, 67, 54, 0.3);
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+
+        .status-approved {
+            background: rgba(76, 175, 80, 0.2);
+            border-left: 4px solid #4caf50;
+        }
+
+        .status-rejected {
+            background: rgba(244, 67, 54, 0.2);
+            border-left: 4px solid #f44336;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 0.3rem 0.8rem;
+            border-radius: 15px;
+            font-size: 0.8rem;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+
+        .badge-approved {
+            background: rgba(76, 175, 80, 0.3);
+            color: #4caf50;
+        }
+
+        .badge-rejected {
+            background: rgba(244, 67, 54, 0.3);
+            color: #f44336;
+        }
+
+        .badge-pending {
+            background: rgba(255, 152, 0, 0.3);
+            color: #ff9800;
+        }
+
+        .loading {
+            text-align: center;
+            color: white;
+            font-size: 1.2rem;
+            padding: 2rem;
+        }
+
+        .error {
+            background: rgba(244, 67, 54, 0.2);
+            color: #f44336;
+            padding: 1rem;
+            border-radius: 10px;
+            margin-bottom: 1rem;
+            border: 1px solid rgba(244, 67, 54, 0.5);
+        }
+
+        @media (max-width: 768px) {
+            .submission-card {
+                grid-template-columns: 1fr;
+                text-align: center;
+            }
+
+            .submission-image {
+                justify-self: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎭 Meme2XYZ Admin Panel</h1>
+            <p>Review and approve meme submissions</p>
+        </div>
+
+        <div class="stats" id="stats">
+            <!-- Stats will be populated by JavaScript -->
+        </div>
+
+        <div class="submissions">
+            <h2>📋 Submissions</h2>
+            <div id="submissions-container">
+                <div class="loading">Loading submissions...</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let submissions = []
+
+        async function loadSubmissions() {
+            try {
+                const response = await fetch('/api/admin/submissions')
+                if (!response.ok) throw new Error('Failed to fetch submissions')
+                
+                submissions = await response.json()
+                renderSubmissions()
+                updateStats()
+            } catch (error) {
+                console.error('Error loading submissions:', error)
+                document.getElementById('submissions-container').innerHTML = 
+                    '<div class="error">Failed to load submissions. Please try again.</div>'
+            }
+        }
+
+        function updateStats() {
+            const total = submissions.length
+            const approved = submissions.filter(s => s.approved === 1).length
+            const rejected = submissions.filter(s => s.approved === -1).length
+            const pending = submissions.filter(s => s.approved === 0).length
+
+            document.getElementById('stats').innerHTML = `
+                <div class="stat-card">
+                    <div class="stat-number">${total}</div>
+                    <div class="stat-label">Total Submissions</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">${pending}</div>
+                    <div class="stat-label">Pending Review</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">${approved}</div>
+                    <div class="stat-label">Approved</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">${rejected}</div>
+                    <div class="stat-label">Rejected</div>
+                </div>
+            `
+        }
+
+        function renderSubmissions() {
+            const container = document.getElementById('submissions-container')
+            
+            if (submissions.length === 0) {
+                container.innerHTML = '<div class="loading">No submissions found.</div>'
+                return
+            }
+
+            container.innerHTML = submissions.map(submission => {
+                const status = submission.approved === 1 ? 'approved' : 
+                             submission.approved === -1 ? 'rejected' : 'pending'
+                
+                const statusBadge = submission.approved === 1 ? 'badge-approved' :
+                                   submission.approved === -1 ? 'badge-rejected' : 'badge-pending'
+
+                const statusText = submission.approved === 1 ? 'Approved' :
+                                  submission.approved === -1 ? 'Rejected' : 'Pending'
+
+                return `
+                    <div class="submission-card ${status !== 'pending' ? 'status-' + status : ''}">
+                        <img src="/uploads/${submission.filename}" 
+                             alt="Submission" 
+                             class="submission-image"
+                             onerror="this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjE1MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjY2NjIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxNCIgZmlsbD0iIzk5OSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPkltYWdlIE5vdCBGb3VuZDwvdGV4dD48L3N2Zz4='">
+                        
+                        <div class="submission-details">
+                            <div class="submission-text">"${submission.user_text}"</div>
+                            <div class="submission-meta">
+                                <strong>File:</strong> ${submission.original_name}<br>
+                                <strong>Submitted:</strong> ${new Date(submission.created_at).toLocaleString()}<br>
+                                <strong>Status:</strong> <span class="status-badge ${statusBadge}">${statusText}</span>
+                            </div>
+                        </div>
+
+                        <div class="submission-actions">
+                            ${submission.approved === 0 ? `
+                                <button class="btn btn-approve" onclick="updateSubmission(${submission.id}, 1)">
+                                    ✅ Approve
+                                </button>
+                                <button class="btn btn-reject" onclick="updateSubmission(${submission.id}, -1)">
+                                    ❌ Reject
+                                </button>
+                            ` : submission.approved === 1 ? `
+                                <button class="btn btn-reject" onclick="updateSubmission(${submission.id}, -1)">
+                                    ❌ Reject
+                                </button>
+                            ` : `
+                                <button class="btn btn-approve" onclick="updateSubmission(${submission.id}, 1)">
+                                    ✅ Approve
+                                </button>
+                            `}
+                        </div>
+                    </div>
+                `
+            }).join('')
+        }
+
+        async function updateSubmission(id, approved) {
+            try {
+                const response = await fetch(`/api/admin/submissions/${id}`, {
+                    method: 'PATCH',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ approved })
+                })
+
+                if (!response.ok) throw new Error('Failed to update submission')
+
+                // Reload submissions to reflect changes
+                await loadSubmissions()
+            } catch (error) {
+                console.error('Error updating submission:', error)
+                alert('Failed to update submission. Please try again.')
+            }
+        }
+
+        // Load submissions when page loads
+        loadSubmissions()
+
+        // Auto-refresh every 30 seconds
+        setInterval(loadSubmissions, 30000)
+    </script>
+</body>
+</html>

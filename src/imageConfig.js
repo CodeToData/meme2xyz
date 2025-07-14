@@ -7,7 +7,8 @@ export const availableImages = [
   'sample-meme-3.jpg',
   'funny-cat.jpg',
   'epic-fail.jpg',
-  'success-kid.jpg'
+  'success-kid.jpg',
+  'whatmeme.png'
 ]
 
 // Function to check if an image exists

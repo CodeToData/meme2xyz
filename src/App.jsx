@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import './App.css'
+import { sanitizeText, validateText, filterInputText } from './textUtils'
 
 function App() {
   const [currentImage, setCurrentImage] = useState(null)
@@ -8,6 +9,13 @@ function App() {
   const [isLoading, setIsLoading] = useState(false)
   const [imageLoaded, setImageLoaded] = useState(false)
   const [availableImages, setAvailableImages] = useState([])
+  
+  // Submission form state
+  const [selectedFile, setSelectedFile] = useState(null)
+  const [dragOver, setDragOver] = useState(false)
+  const [userText, setUserText] = useState('')
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [submitMessage, setSubmitMessage] = useState('')
   
   // Initialize extension cache from localStorage
   const [extensionCache, setExtensionCache] = useState(() => {
@@ -69,6 +77,94 @@ function App() {
     
     // No valid image found
     return null
+  }
+
+  // File upload handlers
+  const handleFileSelect = (event) => {
+    const file = event.target.files[0]
+    if (file && file.type.startsWith('image/')) {
+      setSelectedFile(file)
+      setSubmitMessage('')
+    } else {
+      setSubmitMessage('Please select a valid image file.')
+    }
+  }
+
+  const handleDrop = (event) => {
+    event.preventDefault()
+    setDragOver(false)
+    
+    const files = event.dataTransfer.files
+    if (files.length > 0) {
+      const file = files[0]
+      if (file.type.startsWith('image/')) {
+        setSelectedFile(file)
+        setSubmitMessage('')
+      } else {
+        setSubmitMessage('Please drop a valid image file.')
+      }
+    }
+  }
+
+  const handleDragOver = (event) => {
+    event.preventDefault()
+    setDragOver(true)
+  }
+
+  const handleDragLeave = () => {
+    setDragOver(false)
+  }
+
+  const handleSubmit = async (event) => {
+    event.preventDefault()
+    
+    if (!selectedFile) {
+      setSubmitMessage('Please select an image.')
+      return
+    }
+
+    // Validate and sanitize the text input
+    const validation = validateText(userText)
+    
+    if (!validation.isValid) {
+      setSubmitMessage(validation.error)
+      return
+    }
+
+    setIsSubmitting(true)
+    setSubmitMessage('')
+
+    try {
+      const formData = new FormData()
+      formData.append('image', selectedFile)
+      formData.append('text', validation.sanitized) // Use sanitized text
+      formData.append('timestamp', new Date().toISOString())
+
+      const response = await fetch('/api/submissions', {
+        method: 'POST',
+        body: formData
+      })
+      
+      const result = await response.json()
+      
+      if (!response.ok) {
+        throw new Error(result.error || 'Submission failed')
+      }
+      
+      setSubmitMessage('Submission successful! Your meme will be reviewed.')
+      setSelectedFile(null)
+      setUserText('')
+      
+      // Clear file input
+      const fileInput = document.getElementById('file-input')
+      if (fileInput) fileInput.value = ''
+      
+    } catch (error) {
+      console.error('Submission error:', error)
+      setSubmitMessage(error.message || 'Submission failed. Please try again.')
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   useEffect(() => {
@@ -214,6 +310,90 @@ function App() {
               <p><em>Note: You can use filenames with or without extensions!</em></p>
               <p><em>The system will automatically detect the correct file extension.</em></p>
             </div>
+          </div>
+
+          {/* Meme Submission Form */}
+          <div className="submission-section">
+            <h2>🥊 Submit Your Meme</h2>
+            <form onSubmit={handleSubmit} className="submission-form">
+              <div className="file-upload-section">
+                <div 
+                  className={`drop-zone ${dragOver ? 'drag-over' : ''} ${selectedFile ? 'has-file' : ''}`}
+                  onDrop={handleDrop}
+                  onDragOver={handleDragOver}
+                  onDragLeave={handleDragLeave}
+                >
+                  {selectedFile ? (
+                    <div className="file-preview">
+                      <img 
+                        src={URL.createObjectURL(selectedFile)} 
+                        alt="Preview" 
+                        className="preview-image"
+                      />
+                      <p className="file-name">{selectedFile.name}</p>
+                      <button 
+                        type="button" 
+                        onClick={() => setSelectedFile(null)}
+                        className="remove-file"
+                      >
+                        ✕ Remove
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="drop-zone-content">
+                      <div className="drop-icon">📁</div>
+                      <p>Drag & drop your meme here</p>
+                      <p>or</p>
+                      <label htmlFor="file-input" className="browse-button">
+                        Browse Files
+                      </label>
+                      <input
+                        id="file-input"
+                        type="file"
+                        accept="image/*"
+                        onChange={handleFileSelect}
+                        style={{ display: 'none' }}
+                      />
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="text-input-section">
+                <label htmlFor="user-text" className="text-label">
+                  💪 Test Your Might
+                </label>
+                <textarea
+                  id="user-text"
+                  value={userText}
+                  onChange={(e) => {
+                    const filteredText = filterInputText(e.target.value)
+                    setUserText(filteredText)
+                  }}
+                  placeholder="Enter your meme text, caption, or description... (plain text only)"
+                  className="user-text-input"
+                  rows={4}
+                  maxLength={500}
+                />
+                <div className="char-counter">
+                  {userText.length}/500 characters
+                </div>
+              </div>
+
+              <button 
+                type="submit" 
+                disabled={!selectedFile || !userText.trim() || isSubmitting}
+                className="submit-button"
+              >
+                {isSubmitting ? '⚔️ Fighting...' : '⚔️ MORTAL KOMBAT!'}
+              </button>
+
+              {submitMessage && (
+                <div className={`submit-message ${submitMessage.includes('successful') ? 'success' : 'error'}`}>
+                  {submitMessage}
+                </div>
+              )}
+            </form>
           </div>
 
           {/* Scrolling marquee of available memes */}
