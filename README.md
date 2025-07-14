@@ -2,17 +2,35 @@
 
 **Transform your memes into something extraordinary!**
 
-A beautiful coming soon page built with React + Vite, featuring an animated marquee and modern glass morphism design.
+A dynamic image viewer built with React + Vite, featuring hash-based URL routing for instant image access.
 
 ## ✨ Features
 
-- 🎨 **Beautiful gradient background** with modern design
-- 🎭 **Animated "Coming Soon" marquee** with emojis
+- 🔗 **Hash-based URL routing** - Access images with `xyz2.meme#[image-name]`
+- 🖼️ **Direct image linking** - Share specific images with simple URLs
 - 📱 **Fully responsive** design for all devices
 - ✨ **Glass morphism effects** for modern UI
 - 🌈 **Animated gradient text** for the title
-- 🎯 **Feature cards** with hover effects
-- ⚡ **Built with Vite** for lightning-fast development
+- ⚡ **Instant loading** - No page reloads needed
+- 🎯 **Image gallery** with preview thumbnails
+
+## 🔗 How to Use
+
+Access any image using the format:
+```
+xyz2.meme#[image-name]
+```
+
+**Examples:**
+- `xyz2.meme#sample-meme-1.jpg`
+- `xyz2.meme#funny-cat.jpg`
+- `xyz2.meme#epic-fail.jpg`
+
+## 📁 Adding Images
+
+1. Place your images in the `public/images/` folder
+2. Update the `availableImages` array in `src/App.jsx`
+3. Images will be automatically available via hash URLs
 
 ## 🚀 Getting Started
 
