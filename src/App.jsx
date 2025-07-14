@@ -89,7 +89,7 @@ function App() {
             <h3>Loading image: {currentImage}</h3>
             <p>Checking available formats...</p>
           </div>
-        ) : imageError || !actualImageFile ? (
+        ) : !actualImageFile || imageError ? (
           <div className="error-simple">
             <h3>Image not found: {currentImage}</h3>
             <p>No image file found with that name in any supported format.</p>
