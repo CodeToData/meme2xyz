@@ -1,20 +1,67 @@
 import { useState, useEffect } from 'react'
-import { availableImages } from './imageConfig.js'
 import './App.css'
 
 function App() {
   const [currentImage, setCurrentImage] = useState(null)
+  const [actualImageFile, setActualImageFile] = useState(null)
   const [imageError, setImageError] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
+
+  // Function to dynamically find image by trying common extensions
+  const findImageWithExtension = async (imageName) => {
+    // If the name already has an extension, return it as-is
+    if (imageName.includes('.')) {
+      return imageName
+    }
+
+    // Common image extensions ordered by popularity
+    const extensions = ['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg', 'bmp', 'ico', 'tiff', 'avif']
+    
+    // Try each extension by attempting to load the image
+    for (const ext of extensions) {
+      const testFileName = `${imageName}.${ext}`
+      try {
+        // Create a promise that resolves when image loads or rejects when it fails
+        await new Promise((resolve, reject) => {
+          const img = new Image()
+          img.onload = () => resolve()
+          img.onerror = () => reject()
+          img.src = `/images/${testFileName}`
+        })
+        // If we get here, the image loaded successfully
+        return testFileName
+      } catch {
+        // Continue to next extension
+        continue
+      }
+    }
+    
+    // No valid image found
+    return null
+  }
 
   useEffect(() => {
-    const handleHashChange = () => {
+    const handleHashChange = async () => {
       const hash = window.location.hash.slice(1) // Remove the '#' symbol
       if (hash) {
         setCurrentImage(hash)
         setImageError(false)
+        setIsLoading(true)
+        
+        const foundImage = await findImageWithExtension(hash)
+        if (foundImage) {
+          setActualImageFile(foundImage)
+          setImageError(false)
+        } else {
+          setActualImageFile(null)
+          setImageError(true)
+        }
+        setIsLoading(false)
       } else {
         setCurrentImage(null)
+        setActualImageFile(null)
         setImageError(false)
+        setIsLoading(false)
       }
     }
 
@@ -37,14 +84,20 @@ function App() {
   if (currentImage) {
     return (
       <div className="app image-only">
-        {imageError ? (
+        {isLoading ? (
+          <div className="loading">
+            <h3>Loading image: {currentImage}</h3>
+            <p>Checking available formats...</p>
+          </div>
+        ) : imageError || !actualImageFile ? (
           <div className="error-simple">
             <h3>Image not found: {currentImage}</h3>
-            <p>Available images: {availableImages.join(', ')}</p>
+            <p>No image file found with that name in any supported format.</p>
+            <p>Make sure the image exists in the /public/images/ folder</p>
           </div>
         ) : (
           <img 
-            src={`/images/${currentImage}`}
+            src={`/images/${actualImageFile}`}
             alt={currentImage}
             onError={handleImageError}
             className="full-image"
@@ -54,12 +107,13 @@ function App() {
     )
   }
 
+  // Show homepage only when no hash is present
   return (
     <div className="app">
       <div className="container">
         <header className="header">
           <h1 className="title">Meme 2 XYZ</h1>
-          <p className="subtitle">Transform your memes into something extraordinary</p>
+          <p className="subtitle">Direct image access via URL hash</p>
         </header>
         
         <main className="main">
@@ -68,60 +122,29 @@ function App() {
             <div className="usage-card">
               <p>Access any image by using the format:</p>
               <div className="url-format">
-                <code>xyz2.meme#[image-name]</code>
+                <code>meme2.xyz#[image-name]</code>
               </div>
-              <p>Example: <a href="#sample-meme-1.jpg">xyz2.meme#sample-meme-1.jpg</a></p>
+              <p>Example: <a href="#whatmeme">meme2.xyz#whatmeme</a></p>
+              <p><em>Note: You can use filenames with or without extensions!</em></p>
+              <p><em>The system will automatically detect the correct file extension.</em></p>
             </div>
           </div>
 
-          <div className="available-images-section">
-            <h3>📁 Available Images</h3>
-            <div className="image-grid">
-              {availableImages.map((image, index) => (
-                <div key={index} className="image-card">
-                  <a href={`#${image}`} className="image-link">
-                    <div className="image-preview">
-                      <img 
-                        src={`/images/${image}`}
-                        alt={image}
-                        onError={(e) => {
-                          e.target.style.display = 'none'
-                          e.target.nextSibling.style.display = 'flex'
-                        }}
-                      />
-                      <div className="placeholder" style={{display: 'none'}}>
-                        �️
-                      </div>
-                    </div>
-                    <p className="image-name">{image}</p>
-                  </a>
+          <div className="supported-formats-section">
+            <h3>📁 Supported Image Formats</h3>
+            <div className="formats-grid">
+              {['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg', 'bmp', 'ico', 'tiff', 'avif'].map((ext, index) => (
+                <div key={index} className="format-card">
+                  <span className="format-name">.{ext}</span>
                 </div>
               ))}
             </div>
-          </div>
-          
-          <div className="features">
-            <div className="feature">
-              <span className="emoji">🔗</span>
-              <h3>Direct Links</h3>
-              <p>Share images with simple hash URLs</p>
-            </div>
-            <div className="feature">
-              <span className="emoji">⚡</span>
-              <h3>Instant Access</h3>
-              <p>No page reloads, just pure speed</p>
-            </div>
-            <div className="feature">
-              <span className="emoji">📱</span>
-              <h3>Mobile Friendly</h3>
-              <p>Perfect viewing on any device</p>
-            </div>
+            <p className="note">
+              Just upload your images to <code>/public/images/</code> and access them by name!<br/>
+              The system will automatically detect the correct file extension and encoding.
+            </p>
           </div>
         </main>
-        
-        <footer className="footer">
-          <p>&copy; 2025 Meme 2 XYZ. All rights reserved.</p>
-        </footer>
       </div>
     </div>
   )
