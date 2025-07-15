@@ -25,6 +25,9 @@ function App() {
   const [modalImage, setModalImage] = useState(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
   
+  // Search state
+  const [searchTerm, setSearchTerm] = useState('')
+  
   // Initialize extension cache from localStorage
   const [extensionCache, setExtensionCache] = useState(() => {
     try {
@@ -131,6 +134,24 @@ function App() {
     return cachedImageUrls.get(originalUrl) || originalUrl
   }
 
+  // Function to get the proper raw image URL (handles blob URLs correctly)
+  const getRawImageUrl = (originalUrl) => {
+    const cachedUrl = getCachedImageUrl(originalUrl)
+    // If it's a blob URL, use it directly; otherwise, prepend the origin
+    return cachedUrl.startsWith('blob:') ? cachedUrl : `${window.location.origin}${cachedUrl}`
+  }
+
+  // Function to filter images based on search term
+  const getFilteredImages = () => {
+    if (!searchTerm.trim()) {
+      return availableImages
+    }
+    
+    return availableImages.filter(image => 
+      image.name.toLowerCase().includes(searchTerm.toLowerCase())
+    )
+  }
+
   // Modal functions
   const openImageModal = (image) => {
     setModalImage(image)
@@ -198,7 +219,7 @@ function App() {
 
   const copyRawImageLink = async () => {
     if (modalImage) {
-      const rawLink = `${window.location.origin}${getCachedImageUrl(modalImage.url)}`
+      const rawLink = getRawImageUrl(modalImage.url)
       try {
         await navigator.clipboard.writeText(rawLink)
         // Show a temporary feedback
@@ -392,6 +413,15 @@ function App() {
     
     return (
       <div className="app image-only">
+        {/* Close button to return to main site */}
+        <button 
+          className="fullpage-close-button" 
+          onClick={() => window.location.href = window.location.origin}
+          title="Return to main site"
+        >
+          ✕
+        </button>
+        
         {(!actualImageFile || imageError) ? (
           <div className="error-simple">
             <h3>Image not found: {currentImage}</h3>
@@ -432,6 +462,86 @@ function App() {
         </header>
         
         <main className="main">
+          <div className="image-grid-section">
+            <h2>🎭 Browse Memes</h2>
+            
+            {/* Search Section */}
+            <div className="search-section">
+              <div className="search-container">
+                <input
+                  type="text"
+                  placeholder="Search memes by name..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="search-input"
+                />
+                {searchTerm && (
+                  <button
+                    onClick={() => setSearchTerm('')}
+                    className="search-clear-button"
+                    title="Clear search"
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
+            </div>
+            
+            <div className="image-grid-container">
+              {(() => {
+                const filteredImages = getFilteredImages()
+                
+                if (filteredImages.length === 0 && searchTerm) {
+                  return (
+                    <div style={{color: 'white', padding: '2rem', textAlign: 'center'}}>
+                      No memes found matching "{searchTerm}". Try a different search term.
+                    </div>
+                  )
+                }
+                
+                if (filteredImages.length === 0) {
+                  return (
+                    <div style={{color: 'white', padding: '2rem', textAlign: 'center'}}>
+                      Loading images... If this persists, check console for errors.
+                    </div>
+                  )
+                }
+                
+                return (
+                  <div className="image-grid">
+                    {filteredImages.map((image) => (
+                      <div key={image.name} className="image-grid-item">
+                        <div 
+                          className="image-grid-link"
+                          onClick={() => openImageModal(image)}
+                          style={{ cursor: 'pointer' }}
+                        >
+                          <div className="image-preview">
+                            <img 
+                              src={getCachedImageUrl(image.url)} 
+                              alt={image.name}
+                              className="grid-thumbnail"
+                              loading="lazy"
+                              onError={(e) => {
+                                // Silently fallback to original URL if cached version fails
+                                if (e.target.src !== image.url) {
+                                  e.target.src = image.url
+                                }
+                              }}
+                            />
+                            <div className="image-hashtag-overlay">
+                              #{image.name}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )
+              })()}
+            </div>
+          </div>
+
           <div className="usage-section">
             <h2>🖼️ How to Use</h2>
             <div className="usage-card">
@@ -451,52 +561,6 @@ function App() {
               
               <p><em>Note: You can use filenames with or without extensions!</em></p>
               <p><em>The system will automatically detect the correct file extension.</em></p>
-            </div>
-          </div>
-
-          {/* Image Grid */}
-          <div className="image-grid-section">
-            <h2>🎭 Browse Memes</h2>
-            <p style={{color: 'white', marginBottom: '1rem'}}>
-              Showing {availableImages.length} images 🎉 | 
-              Cache: {cacheStats.count} images ({cacheStats.totalSizeMB}MB)
-            </p>
-            <div className="image-grid-container">
-              {availableImages.length === 0 ? (
-                <div style={{color: 'white', padding: '2rem', textAlign: 'center'}}>
-                  Loading images... If this persists, check console for errors.
-                </div>
-              ) : (
-                <div className="image-grid">
-                  {availableImages.map((image) => (
-                    <div key={image.name} className="image-grid-item">
-                      <div 
-                        className="image-grid-link"
-                        onClick={() => openImageModal(image)}
-                        style={{ cursor: 'pointer' }}
-                      >
-                        <div className="image-preview">
-                          <img 
-                            src={getCachedImageUrl(image.url)} 
-                            alt={image.name}
-                            className="grid-thumbnail"
-                            loading="lazy"
-                            onError={(e) => {
-                              // Silently fallback to original URL if cached version fails
-                              if (e.target.src !== image.url) {
-                                e.target.src = image.url
-                              }
-                            }}
-                          />
-                          <div className="image-hashtag-overlay">
-                            #{image.name}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
             </div>
           </div>
 
@@ -557,7 +621,7 @@ function App() {
                       <input
                         id="raw-image-link"
                         type="text"
-                        value={`${window.location.origin}${getCachedImageUrl(modalImage.url)}`}
+                        value={getRawImageUrl(modalImage.url)}
                         readOnly
                         className="share-input"
                         onClick={(e) => e.target.select()}
@@ -571,7 +635,7 @@ function App() {
                     </div>
                     <div style={{marginTop: '0.5rem'}}>
                       <a 
-                        href={getCachedImageUrl(modalImage.url)}
+                        href={getRawImageUrl(modalImage.url)}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="raw-image-text-link"
