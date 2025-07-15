@@ -18,7 +18,7 @@ const PORT = process.env.PORT || 3001
 // Rate limiting for submissions
 const submissionLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 5, // Limit each IP to 5 submissions per windowMs
+  max: 50, // Increased for development: Limit each IP to 50 submissions per windowMs
   message: {
     error: 'Too many submissions from this IP. Please try again in 15 minutes.'
   },
@@ -29,7 +29,7 @@ const submissionLimiter = rateLimit({
 // General rate limiting
 const generalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // Limit each IP to 100 requests per windowMs
+  max: 1000, // Increased for development: Limit each IP to 1000 requests per windowMs
   standardHeaders: true,
   legacyHeaders: false,
 })
@@ -308,7 +308,21 @@ app.get('/api/images', (req, res) => {
     const images = files
       .filter(file => {
         const ext = path.extname(file).toLowerCase()
-        return imageExtensions.includes(ext)
+        const isImage = imageExtensions.includes(ext)
+        
+        // Check if file is readable and not corrupted
+        try {
+          const filePath = path.join(imagesDir, file)
+          const stats = fs.statSync(filePath)
+          if (stats.size === 0) {
+            console.warn(`Skipping empty file: ${file}`)
+            return false
+          }
+          return isImage
+        } catch (error) {
+          console.warn(`Skipping corrupted file: ${file}`, error.message)
+          return false
+        }
       })
       .map(file => {
         const name = path.parse(file).name
@@ -322,7 +336,7 @@ app.get('/api/images', (req, res) => {
       })
       .sort((a, b) => a.name.localeCompare(b.name))
     
-    console.log(`Found ${images.length} images:`, images.map(img => img.filename))
+    console.log(`Found ${images.length} valid images:`, images.map(img => img.filename))
     res.json(images)
   } catch (error) {
     console.error('Error reading images directory:', error)
