@@ -291,6 +291,45 @@ app.patch('/api/admin/submissions/:id', (req, res) => {
   })
 })
 
+// Get available images from public/images directory
+app.get('/api/images', (req, res) => {
+  try {
+    const imagesDir = path.join(__dirname, 'public', 'images')
+    console.log('Reading images from:', imagesDir)
+    
+    if (!fs.existsSync(imagesDir)) {
+      console.log('Images directory does not exist')
+      return res.json([])
+    }
+    
+    const files = fs.readdirSync(imagesDir)
+    const imageExtensions = ['.png', '.jpg', '.jpeg', '.gif', '.webp', '.svg', '.bmp', '.ico', '.tiff', '.avif']
+    
+    const images = files
+      .filter(file => {
+        const ext = path.extname(file).toLowerCase()
+        return imageExtensions.includes(ext)
+      })
+      .map(file => {
+        const name = path.parse(file).name
+        const extension = path.extname(file).slice(1)
+        return {
+          name,
+          filename: file,
+          extension,
+          url: `/images/${file}`
+        }
+      })
+      .sort((a, b) => a.name.localeCompare(b.name))
+    
+    console.log(`Found ${images.length} images:`, images.map(img => img.filename))
+    res.json(images)
+  } catch (error) {
+    console.error('Error reading images directory:', error)
+    res.status(500).json({ error: 'Failed to load images' })
+  }
+})
+
 // Get approved memes (for the main site)
 app.get('/api/approved-memes', (req, res) => {
   const approvedMemes = submissions
@@ -307,6 +346,9 @@ app.get('/api/approved-memes', (req, res) => {
 
 // Serve uploaded files
 app.use('/uploads', express.static(uploadsDir))
+
+// Serve public images
+app.use('/images', express.static(path.join(__dirname, 'public', 'images')))
 
 // Admin panel route
 app.get('/admin', (req, res) => {

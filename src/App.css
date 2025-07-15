@@ -170,11 +170,13 @@
 
 /* Image Viewer Styles */
 .app.image-only {
+  display: flex;
   align-items: center;
   justify-content: center;
   padding: 0;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   min-height: 100vh;
+  box-sizing: border-box;
 }
 
 .full-image {
@@ -405,6 +407,112 @@
 .usage-card a:hover {
   color: #f9ca24;
   text-decoration: underline;
+}
+
+/* Image Marquee section */
+.image-marquee-section {
+  margin: 3rem 0;
+  overflow: hidden;
+}
+
+.image-marquee-section h2 {
+  color: white;
+  font-size: 2.5rem;
+  margin-bottom: 2rem;
+  text-align: center;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+  background: linear-gradient(45deg, #ff6b6b, #4ecdc4, #45b7d1, #f9ca24);
+  background-size: 400% 400%;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: gradientShift 3s ease infinite;
+}
+
+.image-marquee-container {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 20px;
+  padding: 2rem;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  overflow: hidden;
+  backdrop-filter: blur(10px);
+  white-space: nowrap;
+}
+
+.image-marquee {
+  display: inline-flex;
+  gap: 2rem;
+  animation: scroll-horizontal 40s linear infinite;
+  white-space: nowrap;
+}
+
+@keyframes scroll-horizontal {
+  0% {
+    transform: translateX(100%);
+  }
+  100% {
+    transform: translateX(-100%);
+  }
+}
+
+.image-marquee-item {
+  flex-shrink: 0;
+  transition: transform 0.3s ease;
+  display: inline-block;
+}
+
+.image-marquee-item:hover {
+  transform: scale(1.05);
+}
+
+.image-marquee-link {
+  text-decoration: none;
+  display: block;
+}
+
+.image-preview {
+  position: relative;
+  width: 200px;
+  height: 150px;
+  border-radius: 15px;
+  overflow: hidden;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+  transition: all 0.3s ease;
+}
+
+.image-preview:hover {
+  box-shadow: 0 12px 35px rgba(0, 0, 0, 0.4);
+  transform: translateY(-5px);
+}
+
+.marquee-thumbnail {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.3s ease;
+}
+
+.image-preview:hover .marquee-thumbnail {
+  transform: scale(1.1);
+}
+
+.image-hashtag-overlay {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.8), transparent);
+  color: white;
+  padding: 1rem 1rem 0.8rem;
+  font-weight: bold;
+  font-size: 1rem;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+  transform: translateY(100%);
+  transition: transform 0.3s ease;
+}
+
+.image-preview:hover .image-hashtag-overlay {
+  transform: translateY(0);
 }
 
 /* Marquee section */

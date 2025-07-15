@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react'
 import './App.css'
-import { sanitizeText, validateText, filterInputText } from './textUtils'
 
 function App() {
   const [currentImage, setCurrentImage] = useState(null)
@@ -9,13 +8,6 @@ function App() {
   const [isLoading, setIsLoading] = useState(false)
   const [imageLoaded, setImageLoaded] = useState(false)
   const [availableImages, setAvailableImages] = useState([])
-  
-  // Submission form state
-  const [selectedFile, setSelectedFile] = useState(null)
-  const [dragOver, setDragOver] = useState(false)
-  const [userText, setUserText] = useState('')
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [submitMessage, setSubmitMessage] = useState('')
   
   // Initialize extension cache from localStorage
   const [extensionCache, setExtensionCache] = useState(() => {
@@ -79,91 +71,19 @@ function App() {
     return null
   }
 
-  // File upload handlers
-  const handleFileSelect = (event) => {
-    const file = event.target.files[0]
-    if (file && file.type.startsWith('image/')) {
-      setSelectedFile(file)
-      setSubmitMessage('')
-    } else {
-      setSubmitMessage('Please select a valid image file.')
-    }
-  }
-
-  const handleDrop = (event) => {
-    event.preventDefault()
-    setDragOver(false)
-    
-    const files = event.dataTransfer.files
-    if (files.length > 0) {
-      const file = files[0]
-      if (file.type.startsWith('image/')) {
-        setSelectedFile(file)
-        setSubmitMessage('')
-      } else {
-        setSubmitMessage('Please drop a valid image file.')
-      }
-    }
-  }
-
-  const handleDragOver = (event) => {
-    event.preventDefault()
-    setDragOver(true)
-  }
-
-  const handleDragLeave = () => {
-    setDragOver(false)
-  }
-
-  const handleSubmit = async (event) => {
-    event.preventDefault()
-    
-    if (!selectedFile) {
-      setSubmitMessage('Please select an image.')
-      return
-    }
-
-    // Validate and sanitize the text input
-    const validation = validateText(userText)
-    
-    if (!validation.isValid) {
-      setSubmitMessage(validation.error)
-      return
-    }
-
-    setIsSubmitting(true)
-    setSubmitMessage('')
-
+  // Function to fetch available images from the server
+  const fetchAvailableImages = async () => {
     try {
-      const formData = new FormData()
-      formData.append('image', selectedFile)
-      formData.append('text', validation.sanitized) // Use sanitized text
-      formData.append('timestamp', new Date().toISOString())
-
-      const response = await fetch('/api/submissions', {
-        method: 'POST',
-        body: formData
-      })
-      
-      const result = await response.json()
-      
-      if (!response.ok) {
-        throw new Error(result.error || 'Submission failed')
+      const response = await fetch('/api/images')
+      if (response.ok) {
+        const images = await response.json()
+        setAvailableImages(images)
+        console.log('Fetched images:', images)
+      } else {
+        console.error('Failed to fetch images:', response.statusText)
       }
-      
-      setSubmitMessage('Submission successful! Your meme will be reviewed.')
-      setSelectedFile(null)
-      setUserText('')
-      
-      // Clear file input
-      const fileInput = document.getElementById('file-input')
-      if (fileInput) fileInput.value = ''
-      
     } catch (error) {
-      console.error('Submission error:', error)
-      setSubmitMessage(error.message || 'Submission failed. Please try again.')
-    } finally {
-      setIsSubmitting(false)
+      console.error('Error fetching images:', error)
     }
   }
 
@@ -207,34 +127,10 @@ function App() {
     }
   }, [])
 
-  // Effect to discover available images from cache and common names
+  // Effect to fetch available images from server
   useEffect(() => {
-    const discoverImages = () => {
-      const imageSet = new Set()
-      
-      // Add cached images first (these are confirmed to exist)
-      extensionCache.forEach((ext, name) => {
-        imageSet.add({ name, extension: ext, cached: true })
-      })
-      
-      // Add some common meme names that might exist
-      const commonMemeNames = [
-        'whatmeme', 'sample-meme-1', 'sample-meme-2', 'sample-meme-3', 
-        'waiting', 'funny', 'epic', 'success', 'fail', 'drake', 'distracted',
-        'womanyelling', 'expanding-brain', 'stonks', 'this-is-fine', 'surprised-pikachu'
-      ]
-      
-      commonMemeNames.forEach(name => {
-        if (!extensionCache.has(name)) {
-          imageSet.add({ name, extension: 'unknown', cached: false })
-        }
-      })
-      
-      setAvailableImages(Array.from(imageSet))
-    }
-    
-    discoverImages()
-  }, [extensionCache])
+    fetchAvailableImages()
+  }, [])
 
   const handleImageLoad = () => {
     setImageLoaded(true)
@@ -305,101 +201,26 @@ function App() {
             </div>
           </div>
 
-          {/* Meme Submission Form */}
-          <div className="submission-section">
-            <h2>🥊 Submit Your Meme</h2>
-            <form onSubmit={handleSubmit} className="submission-form">
-              <div className="file-upload-section">
-                <div 
-                  className={`drop-zone ${dragOver ? 'drag-over' : ''} ${selectedFile ? 'has-file' : ''}`}
-                  onDrop={handleDrop}
-                  onDragOver={handleDragOver}
-                  onDragLeave={handleDragLeave}
-                >
-                  {selectedFile ? (
-                    <div className="file-preview">
-                      <img 
-                        src={URL.createObjectURL(selectedFile)} 
-                        alt="Preview" 
-                        className="preview-image"
-                      />
-                      <p className="file-name">{selectedFile.name}</p>
-                      <button 
-                        type="button" 
-                        onClick={() => setSelectedFile(null)}
-                        className="remove-file"
-                      >
-                        ✕ Remove
-                      </button>
-                    </div>
-                  ) : (
-                    <div className="drop-zone-content">
-                      <div className="drop-icon">📁</div>
-                      <p>Drag & drop your meme here</p>
-                      <p>or</p>
-                      <label htmlFor="file-input" className="browse-button">
-                        Browse Files
-                      </label>
-                      <input
-                        id="file-input"
-                        type="file"
-                        accept="image/*"
-                        onChange={handleFileSelect}
-                        style={{ display: 'none' }}
-                      />
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              <div className="text-input-section">
-                <label htmlFor="user-text" className="text-label">
-                  💪 Test Your Might
-                </label>
-                <textarea
-                  id="user-text"
-                  value={userText}
-                  onChange={(e) => {
-                    const filteredText = filterInputText(e.target.value)
-                    setUserText(filteredText)
-                  }}
-                  placeholder="Enter your meme text, caption, or description... (plain text only)"
-                  className="user-text-input"
-                  rows={4}
-                  maxLength={500}
-                />
-                <div className="char-counter">
-                  {userText.length}/500 characters
-                </div>
-              </div>
-
-              <button 
-                type="submit" 
-                disabled={!selectedFile || !userText.trim() || isSubmitting}
-                className="submit-button"
-              >
-                {isSubmitting ? '⚔️ Fighting...' : '⚔️ MORTAL KOMBAT!'}
-              </button>
-
-              {submitMessage && (
-                <div className={`submit-message ${submitMessage.includes('successful') ? 'success' : 'error'}`}>
-                  {submitMessage}
-                </div>
-              )}
-            </form>
-          </div>
-
-          {/* Scrolling marquee of available memes */}
-          <div className="marquee-section">
-            <h3>🎭 Available Memes</h3>
-            <div className="marquee-container">
-              <div className="marquee">
+          {/* Enhanced Image Marquee */}
+          <div className="image-marquee-section">
+            <h2>🎭 Browse Memes</h2>
+            <div className="image-marquee-container">
+              <div className="image-marquee">
+                {/* Duplicate the array to create seamless infinite scroll */}
                 {availableImages.concat(availableImages).map((image, index) => (
-                  <div key={`${image.name}-${index}`} className={`marquee-item ${image.cached ? 'cached' : 'uncached'}`}>
-                    <a href={`#${image.name}`} className="marquee-link">
-                      <span className="meme-name">{image.name}</span>
-                      {image.cached && <span className="meme-ext">.{image.extension}</span>}
-                      {image.cached && <span className="cached-badge">⚡</span>}
+                  <div key={`${image.name}-${index}`} className="image-marquee-item">
+                    <a href={`#${image.name}`} className="image-marquee-link">
+                      <div className="image-preview">
+                        <img 
+                          src={image.url} 
+                          alt={image.name}
+                          className="marquee-thumbnail"
+                          loading="lazy"
+                        />
+                        <div className="image-hashtag-overlay">
+                          #{image.name}
+                        </div>
+                      </div>
                     </a>
                   </div>
                 ))}
@@ -407,39 +228,6 @@ function App() {
             </div>
           </div>
 
-          <div className="supported-formats-section">
-            <h3>📁 Supported Image Formats</h3>
-            <div className="formats-grid">
-              {['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg', 'bmp', 'ico', 'tiff', 'avif'].map((ext, index) => (
-                <div key={index} className="format-card">
-                  <span className="format-name">.{ext}</span>
-                </div>
-              ))}
-            </div>
-            <p className="note">
-              Just upload your images to <code>/public/images/</code> and access them by name!<br/>
-              The system will automatically detect the correct file extension and encoding.
-            </p>
-            
-            {extensionCache.size > 0 && (
-              <div className="cache-info">
-                <h4>🚀 Cached Extensions ({extensionCache.size} images)</h4>
-                <div className="cached-images">
-                  {[...extensionCache.entries()].map(([imageName, extension]) => (
-                    <div key={imageName} className="cached-image">
-                      <a href={`#${imageName}`} className="cached-link">
-                        <span className="image-name">{imageName}</span>
-                        <span className="cached-ext">.{extension}</span>
-                      </a>
-                    </div>
-                  ))}
-                </div>
-                <p className="cache-note">
-                  <em>These images load instantly since their extensions are cached!</em>
-                </p>
-              </div>
-            )}
-          </div>
         </main>
       </div>
     </div>
