@@ -87,29 +87,34 @@ function App() {
     return null
   }
 
-  // Function to preload and cache all images
+  // Function to preload and cache all images with progressive loading
   const preloadImages = async (images) => {
     console.log('Starting image preload and caching...')
     const newCachedUrls = new Map(cachedImageUrls)
     
-    // Add a delay between requests to avoid rate limiting
-    for (let i = 0; i < images.length; i++) {
-      const image = images[i]
+    // Load images in parallel for faster initial display
+    const loadPromises = images.map(async (image) => {
       try {
         const cachedUrl = await imageCache.getImage(image.url)
         newCachedUrls.set(image.url, cachedUrl)
         console.log(`Cached: ${image.name}`)
         
-        // Add a small delay between requests to avoid rate limiting
-        if (i < images.length - 1) {
-          await new Promise(resolve => setTimeout(resolve, 200)) // 200ms delay
-        }
+        // Update the cache URLs immediately as each image loads
+        setCachedImageUrls(new Map(newCachedUrls))
+        
+        return { success: true, image: image.name }
       } catch (error) {
         // Silently fail and use original URL - no user-facing error
         newCachedUrls.set(image.url, image.url)
+        setCachedImageUrls(new Map(newCachedUrls))
+        return { success: false, image: image.name, error }
       }
-    }
+    })
     
+    // Wait for all images to complete (or fail)
+    await Promise.allSettled(loadPromises)
+    
+    // Final update to ensure all URLs are set
     setCachedImageUrls(newCachedUrls)
     
     // Update cache stats (optional, fails silently)
@@ -191,6 +196,35 @@ function App() {
     }
   }
 
+  const copyRawImageLink = async () => {
+    if (modalImage) {
+      const rawLink = `${window.location.origin}${getCachedImageUrl(modalImage.url)}`
+      try {
+        await navigator.clipboard.writeText(rawLink)
+        // Show a temporary feedback
+        const button = document.querySelector('.copy-raw-button')
+        if (button) {
+          const originalText = button.textContent
+          button.textContent = 'Copied! ✓'
+          button.style.backgroundColor = '#4ade80'
+          setTimeout(() => {
+            button.textContent = originalText
+            button.style.backgroundColor = ''
+          }, 2000)
+        }
+      } catch (error) {
+        console.error('Failed to copy raw image link:', error)
+        // Fallback for older browsers
+        const textArea = document.createElement('textarea')
+        textArea.value = rawLink
+        document.body.appendChild(textArea)
+        textArea.select()
+        document.execCommand('copy')
+        document.body.removeChild(textArea)
+      }
+    }
+  }
+
   // Function to fetch available images from the server
   const fetchAvailableImages = async () => {
     if (isInitializing) {
@@ -199,6 +233,10 @@ function App() {
     
     try {
       setIsInitializing(true)
+      
+      // Start preloading default images immediately (don't wait for API)
+      preloadImages(availableImages)
+      
       const response = await fetch('/api/images')
       
       if (response.ok) {
@@ -216,21 +254,17 @@ function App() {
         const mergedImages = Array.from(imageMap.values()).sort((a, b) => a.name.localeCompare(b.name))
         setAvailableImages(mergedImages)
         
-        // Preload all images in the background (only if not already done)
-        if (!cachedImageUrls.size) {
-          preloadImages(mergedImages)
-        }
-      } else {
-        // API failed, but we still have default images - no user notification needed
-        if (!cachedImageUrls.size) {
-          preloadImages(availableImages)
+        // Preload any new images from API
+        const newImages = apiImages.filter(apiImg => 
+          !availableImages.some(defaultImg => defaultImg.name === apiImg.name)
+        )
+        if (newImages.length > 0) {
+          preloadImages(newImages)
         }
       }
     } catch (error) {
-      // Network error, but we still have default images - no user notification needed
-      if (!cachedImageUrls.size) {
-        preloadImages(availableImages)
-      }
+      // Network error, but we already started preloading default images
+      console.log('API fetch failed, using default images')
     } finally {
       setIsInitializing(false)
     }
@@ -322,36 +356,21 @@ function App() {
 
   // Effect to fetch available images from server and initialize cache
   useEffect(() => {
-    // Initialize image cache and preload default images immediately
+    // Start fetching images immediately without waiting for anything
+    fetchAvailableImages()
+    
+    // Initialize image cache in the background (non-blocking)
     const initializeCache = async () => {
       try {
         await imageCache.init()
         console.log('Image cache initialized')
-        
-        // Clean up old cache entries
         await imageCache.cleanupCache()
-        
-        // Define default images here to avoid dependency issues
-        const defaultImages = [
-          { name: 'lnc', filename: 'lnc.png', extension: 'png', url: '/images/lnc.png' },
-          { name: 'whatmeme', filename: 'whatmeme.png', extension: 'png', url: '/images/whatmeme.png' },
-          { name: 'waiting', filename: 'waiting.jpg', extension: 'jpg', url: '/images/waiting.jpg' },
-          { name: 'sorry', filename: 'sorry.gif', extension: 'gif', url: '/images/sorry.gif' }
-        ]
-        
-        // Preload default images immediately
-        preloadImages(defaultImages)
-        
-        // Then fetch from API (this will merge with defaults)
-        fetchAvailableImages()
       } catch (error) {
         console.error('Failed to initialize image cache:', error)
-        // Fallback to regular loading
-        fetchAvailableImages()
       }
     }
     
-    initializeCache()
+    initializeCache() // Fire and forget
   }, []) // Empty dependency array to run only once
 
   const handleImageLoad = () => {
@@ -435,25 +454,24 @@ function App() {
             </div>
           </div>
 
-          {/* Enhanced Image Marquee */}
-          <div className="image-marquee-section">
+          {/* Image Grid */}
+          <div className="image-grid-section">
             <h2>🎭 Browse Memes</h2>
             <p style={{color: 'white', marginBottom: '1rem'}}>
               Showing {availableImages.length} images 🎉 | 
               Cache: {cacheStats.count} images ({cacheStats.totalSizeMB}MB)
             </p>
-            <div className="image-marquee-container">
-              <div className="image-marquee">
-                {availableImages.length === 0 ? (
-                  <div style={{color: 'white', padding: '2rem', textAlign: 'center'}}>
-                    Loading images... If this persists, check console for errors.
-                  </div>
-                ) : (
-                  /* Duplicate the array to create seamless infinite scroll */
-                  availableImages.concat(availableImages).map((image, index) => (
-                    <div key={`${image.name}-${index}`} className="image-marquee-item">
+            <div className="image-grid-container">
+              {availableImages.length === 0 ? (
+                <div style={{color: 'white', padding: '2rem', textAlign: 'center'}}>
+                  Loading images... If this persists, check console for errors.
+                </div>
+              ) : (
+                <div className="image-grid">
+                  {availableImages.map((image) => (
+                    <div key={image.name} className="image-grid-item">
                       <div 
-                        className="image-marquee-link"
+                        className="image-grid-link"
                         onClick={() => openImageModal(image)}
                         style={{ cursor: 'pointer' }}
                       >
@@ -461,7 +479,7 @@ function App() {
                           <img 
                             src={getCachedImageUrl(image.url)} 
                             alt={image.name}
-                            className="marquee-thumbnail"
+                            className="grid-thumbnail"
                             loading="lazy"
                             onError={(e) => {
                               // Silently fallback to original URL if cached version fails
@@ -476,10 +494,11 @@ function App() {
                         </div>
                       </div>
                     </div>
-                  ))
-                )}
-              </div>
-            </div>          </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
 
           {/* Image Modal */}
           {isModalOpen && modalImage && (
@@ -527,6 +546,46 @@ function App() {
                       >
                         📋 Copy
                       </button>
+                    </div>
+                  </div>
+                  
+                  <div className="share-section">
+                    <label htmlFor="raw-image-link" className="share-label">
+                      🖼️ Raw image:
+                    </label>
+                    <div className="share-input-container">
+                      <input
+                        id="raw-image-link"
+                        type="text"
+                        value={`${window.location.origin}${getCachedImageUrl(modalImage.url)}`}
+                        readOnly
+                        className="share-input"
+                        onClick={(e) => e.target.select()}
+                      />
+                      <button 
+                        className="copy-raw-button"
+                        onClick={copyRawImageLink}
+                      >
+                        📋 Copy
+                      </button>
+                    </div>
+                    <div style={{marginTop: '0.5rem'}}>
+                      <a 
+                        href={getCachedImageUrl(modalImage.url)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="raw-image-text-link"
+                        style={{
+                          color: '#60a5fa',
+                          textDecoration: 'none',
+                          fontSize: '0.875rem',
+                          fontWeight: '500'
+                        }}
+                        onMouseOver={(e) => e.target.style.textDecoration = 'underline'}
+                        onMouseOut={(e) => e.target.style.textDecoration = 'none'}
+                      >
+                        🔗 Open raw image in new tab
+                      </a>
                     </div>
                   </div>
                 </div>
