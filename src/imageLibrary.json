@@ -1,11 +1,13 @@
-// Auto-generated image configuration
-export const imageConfig = [
+[
   {
     "name": "meme-1752477327493-254178927",
     "filename": "meme-1752477327493-254178927.jpg",
     "extension": "jpg",
     "url": "/images/meme-1752477327493-254178927.jpg",
     "thumbnailUrl": "/thumbnails/meme-1752477327493-254178927.jpg",
+    "originalSize": 30359,
+    "optimizedSize": 33855,
+    "thumbnailSize": 23548,
     "dimensions": {
       "original": {
         "width": 600,
@@ -19,7 +21,9 @@ export const imageConfig = [
         "width": 400,
         "height": 233
       }
-    }
+    },
+    "compression": "-11.5",
+    "processed": "2025-07-15T09:07:10.095Z"
   },
   {
     "name": "meme-1752477988952-80226879",
@@ -27,6 +31,9 @@ export const imageConfig = [
     "extension": "jpg",
     "url": "/images/meme-1752477988952-80226879.jpg",
     "thumbnailUrl": "/thumbnails/meme-1752477988952-80226879.jpg",
+    "originalSize": 153262,
+    "optimizedSize": 104185,
+    "thumbnailSize": 17117,
     "dimensions": {
       "original": {
         "width": 1450,
@@ -40,7 +47,9 @@ export const imageConfig = [
         "width": 400,
         "height": 211
       }
-    }
+    },
+    "compression": "32.0",
+    "processed": "2025-07-15T09:07:10.125Z"
   },
   {
     "name": "meme-1752478265737-336275506",
@@ -48,6 +57,9 @@ export const imageConfig = [
     "extension": "jpg",
     "url": "/images/meme-1752478265737-336275506.jpg",
     "thumbnailUrl": "/thumbnails/meme-1752478265737-336275506.jpg",
+    "originalSize": 153262,
+    "optimizedSize": 104185,
+    "thumbnailSize": 17117,
     "dimensions": {
       "original": {
         "width": 1450,
@@ -61,7 +73,9 @@ export const imageConfig = [
         "width": 400,
         "height": 211
       }
-    }
+    },
+    "compression": "32.0",
+    "processed": "2025-07-15T09:07:10.153Z"
   },
   {
     "name": "meme-1752479458850-952817704",
@@ -69,6 +83,9 @@ export const imageConfig = [
     "extension": "jpg",
     "url": "/images/meme-1752479458850-952817704.jpg",
     "thumbnailUrl": "/thumbnails/meme-1752479458850-952817704.jpg",
+    "originalSize": 153262,
+    "optimizedSize": 104185,
+    "thumbnailSize": 17117,
     "dimensions": {
       "original": {
         "width": 1450,
@@ -82,8 +99,8 @@ export const imageConfig = [
         "width": 400,
         "height": 211
       }
-    }
+    },
+    "compression": "32.0",
+    "processed": "2025-07-15T09:07:10.180Z"
   }
-];
-
-export default imageConfig;
+]
