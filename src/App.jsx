@@ -24,7 +24,6 @@ function App() {
   // Modal state for image viewer
   const [modalImage, setModalImage] = useState(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false)
   
   // Search state
   const [searchTerm, setSearchTerm] = useState('')
@@ -171,13 +170,8 @@ function App() {
   const closeImageModal = () => {
     setIsModalOpen(false)
     setModalImage(null)
-    setIsSidebarOpen(false) // Reset sidebar when closing modal
     // Return to homepage (no hash or path)
     window.history.pushState(null, '', window.location.origin)
-  }
-
-  const toggleSidebar = () => {
-    setIsSidebarOpen(!isSidebarOpen)
   }
 
   // Handle ESC key to close modal
@@ -584,13 +578,7 @@ function App() {
                   ✕
                 </button>
                 
-                <div className={`modal-sidebar ${isSidebarOpen ? 'open' : ''}`}>
-                  <button className="sidebar-toggle" onClick={toggleSidebar}>
-                    <span className={`sidebar-arrow ${isSidebarOpen ? 'open' : ''}`}>
-                      ➤
-                    </span>
-                  </button>
-                  
+                <div className="modal-sidebar">
                   <div className="modal-header">
                     <h3 className="modal-title">#{modalImage.name}</h3>
                   </div>
@@ -609,11 +597,29 @@ function App() {
                         onClick={(e) => e.target.select()}
                       />
                       <button 
-                        className="copy-button"
+                        className="copy-raw-button"
                         onClick={copyImageLink}
                       >
                         📋
                       </button>
+                    </div>
+                    <div style={{marginTop: '0.5rem'}}>
+                      <a 
+                        href={`${window.location.origin}/#${modalImage.name}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="raw-image-text-link"
+                        style={{
+                          color: '#60a5fa',
+                          textDecoration: 'none',
+                          fontSize: '0.875rem',
+                          fontWeight: '500'
+                        }}
+                        onMouseOver={(e) => e.target.style.textDecoration = 'underline'}
+                        onMouseOut={(e) => e.target.style.textDecoration = 'none'}
+                      >
+                        🔗 Open share link in new tab
+                      </a>
                     </div>
                   </div>
                   
