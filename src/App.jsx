@@ -252,18 +252,13 @@ function App() {
   if (currentImage) {
     return (
       <div className="app image-only">
-        {isLoading && !actualImageFile ? (
-          <div className="loading">
-            <h3>Loading image: {currentImage}</h3>
-            <p>Checking available formats...</p>
-          </div>
-        ) : !actualImageFile || imageError ? (
+        {(!actualImageFile || imageError) ? (
           <div className="error-simple">
             <h3>Image not found: {currentImage}</h3>
             <p>No image file found with that name in any supported format.</p>
             <p>Make sure the image exists in the /public/images/ folder</p>
           </div>
-        ) : !imageLoaded ? (
+        ) : (
           <>
             {/* Hidden image for loading - ensures full load before display */}
             <img 
@@ -273,17 +268,15 @@ function App() {
               onError={handleImageError}
               style={{ display: 'none' }}
             />
-            <div className="loading">
-              <h3>Loading image: {currentImage}</h3>
-              <p>Decoding image data...</p>
-            </div>
+            {/* Show image only when loaded */}
+            {imageLoaded && (
+              <img 
+                src={`/images/${actualImageFile}`}
+                alt={currentImage}
+                className="full-image"
+              />
+            )}
           </>
-        ) : (
-          <img 
-            src={`/images/${actualImageFile}`}
-            alt={currentImage}
-            className="full-image"
-          />
         )}
       </div>
     )
