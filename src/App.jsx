@@ -38,6 +38,12 @@ function App() {
     }
   })
 
+  // Helper function to remove file extension from image name
+  const removeFileExtension = (filename) => {
+    const lastDotIndex = filename.lastIndexOf('.')
+    return lastDotIndex > 0 ? filename.substring(0, lastDotIndex) : filename
+  }
+
   // Function to dynamically find image by trying common extensions
   const findImageWithExtension = async (imageName) => {
     // If the name already has an extension, return it as-is
@@ -196,7 +202,8 @@ function App() {
 
   const copyImageLink = async () => {
     if (modalImage) {
-      const link = `${window.location.origin}/#${modalImage.name}`
+      const nameWithoutExtension = removeFileExtension(modalImage.name)
+      const link = `${window.location.origin}/#${nameWithoutExtension}`
       try {
         await navigator.clipboard.writeText(link)
         // Show a temporary feedback
@@ -580,7 +587,7 @@ function App() {
                 
                 <div className="modal-sidebar">
                   <div className="modal-header">
-                    <h3 className="modal-title">#{modalImage.name}</h3>
+                    <h3 className="modal-title">#{removeFileExtension(modalImage.name)}</h3>
                   </div>
                   
                   <div className="share-section">
@@ -591,13 +598,13 @@ function App() {
                       <input
                         id="share-link"
                         type="text"
-                        value={`${window.location.origin}/#${modalImage.name}`}
+                        value={`${window.location.origin}/#${removeFileExtension(modalImage.name)}`}
                         readOnly
                         className="share-input"
                         onClick={(e) => e.target.select()}
                       />
                       <button 
-                        className="copy-raw-button"
+                        className="copy-button"
                         onClick={copyImageLink}
                       >
                         📋
@@ -605,7 +612,7 @@ function App() {
                     </div>
                     <div style={{marginTop: '0.5rem'}}>
                       <a 
-                        href={`${window.location.origin}/#${modalImage.name}`}
+                        href={`${window.location.origin}/#${removeFileExtension(modalImage.name)}`}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="raw-image-text-link"
