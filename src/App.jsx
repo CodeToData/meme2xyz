@@ -652,7 +652,7 @@ function App() {
                     </div>
                     <div style={{marginTop: '0.5rem'}}>
                       <a 
-                        href={getOptimizedImageUrl(modalImage.url)}
+                        href={`${window.location.origin}/${removeFileExtension(modalImage.name)}`}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="raw-image-text-link"
@@ -665,7 +665,7 @@ function App() {
                         onMouseOver={(e) => e.target.style.textDecoration = 'underline'}
                         onMouseOut={(e) => e.target.style.textDecoration = 'none'}
                       >
-                        🔗 Open raw image in new tab
+                        🔗 Open image page in new tab
                       </a>
                     </div>
                   </div>
