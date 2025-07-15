@@ -241,8 +241,35 @@ function App() {
       const pathname = window.location.pathname
       const hash = window.location.hash.slice(1) // Remove the '#' symbol
       
-      // Check if we have a direct path (like /lnc)
-      if (pathname !== '/' && pathname !== '') {
+      // Check if we have a hash URL first (like #lnc) - this takes priority
+      if (hash) {
+        const foundImage = await findImageWithExtension(hash)
+        if (foundImage) {
+          // Hash URL shows modal
+          const imageObj = availableImages.find(img => img.name === hash)
+          if (imageObj) {
+            setModalImage(imageObj)
+            setIsModalOpen(true)
+            // Clear the current image to show homepage with modal
+            setCurrentImage(null)
+            setActualImageFile(null)
+            setImageError(false)
+            setIsLoading(false)
+            setImageLoaded(false)
+          }
+        } else {
+          // Image not found for hash URL - show homepage with error modal or just homepage
+          setCurrentImage(null)
+          setActualImageFile(null)
+          setImageError(false)
+          setIsLoading(false)
+          setImageLoaded(false)
+          setIsModalOpen(false)
+          setModalImage(null)
+        }
+      }
+      // Check if we have a direct path (like /lnc) - only if no hash
+      else if (pathname !== '/' && pathname !== '') {
         const imageName = pathname.slice(1) // Remove leading slash
         const foundImage = await findImageWithExtension(imageName)
         
@@ -262,33 +289,6 @@ function App() {
           setIsLoading(false)
           setImageLoaded(false)
           setCurrentImage(imageName)
-          setIsModalOpen(false)
-          setModalImage(null)
-        }
-      }
-      // Check if we have a hash URL (like #lnc)
-      else if (hash) {
-        const foundImage = await findImageWithExtension(hash)
-        if (foundImage) {
-          // Hash URL shows modal
-          const imageObj = availableImages.find(img => img.name === hash)
-          if (imageObj) {
-            setModalImage(imageObj)
-            setIsModalOpen(true)
-            // Clear the current image to show homepage with modal
-            setCurrentImage(null)
-            setActualImageFile(null)
-            setImageError(false)
-            setIsLoading(false)
-            setImageLoaded(false)
-          }
-        } else {
-          // Image not found
-          setActualImageFile(null)
-          setImageError(true)
-          setIsLoading(false)
-          setImageLoaded(false)
-          setCurrentImage(hash)
           setIsModalOpen(false)
           setModalImage(null)
         }
@@ -366,8 +366,8 @@ function App() {
     setImageLoaded(false)
   }
 
-  // If there's a hash with an image name, show only the image
-  if (currentImage) {
+  // If there's a current image for full-page view (not modal), show only the image
+  if (currentImage && !isModalOpen) {
     const imageUrl = actualImageFile ? `/images/${actualImageFile}` : null
     const cachedUrl = imageUrl ? getCachedImageUrl(imageUrl) : null
     
