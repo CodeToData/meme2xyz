@@ -241,6 +241,8 @@ app.post('/api/submissions', submissionLimiter, upload.single('image'), (req, re
 
 // Get all submissions (for admin review)
 app.get('/api/admin/submissions', (req, res) => {
+  console.log(`📊 Admin API called - returning ${submissions.length} submissions`)
+  console.log('Submissions:', submissions.map(s => ({ id: s.id, text: s.user_text, approved: s.approved })))
   res.json(submissions.slice().reverse()) // Most recent first
 })
 

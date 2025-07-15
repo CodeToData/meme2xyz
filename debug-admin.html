@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug Admin Panel</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background: #f0f0f0; }
+        .debug { background: white; padding: 20px; margin: 10px 0; border-radius: 5px; }
+        .error { background: #ffebee; color: #c62828; }
+        .success { background: #e8f5e8; color: #2e7d32; }
+        pre { background: #f5f5f5; padding: 10px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>🔧 Admin Panel Debug</h1>
+    
+    <div class="debug">
+        <h3>Server Status</h3>
+        <div id="server-status">Checking...</div>
+    </div>
+
+    <div class="debug">
+        <h3>API Test</h3>
+        <div id="api-test">Testing...</div>
+    </div>
+
+    <div class="debug">
+        <h3>Submissions Data</h3>
+        <div id="submissions-data">Loading...</div>
+    </div>
+
+    <div class="debug">
+        <h3>Network Logs</h3>
+        <div id="network-logs"></div>
+    </div>
+
+    <script>
+        const log = (message, type = 'info') => {
+            const networkLogs = document.getElementById('network-logs')
+            const timestamp = new Date().toLocaleTimeString()
+            networkLogs.innerHTML += `<div>[${timestamp}] ${type.toUpperCase()}: ${message}</div>`
+        }
+
+        // Test server connectivity
+        async function testServer() {
+            try {
+                log('Testing server connection...')
+                const response = await fetch('/')
+                if (response.ok) {
+                    document.getElementById('server-status').innerHTML = '<span class="success">✅ Server is running</span>'
+                    log('Server connection: OK')
+                } else {
+                    document.getElementById('server-status').innerHTML = '<span class="error">❌ Server responded with error</span>'
+                    log(`Server error: ${response.status}`)
+                }
+            } catch (error) {
+                document.getElementById('server-status').innerHTML = '<span class="error">❌ Cannot connect to server</span>'
+                log(`Server connection failed: ${error.message}`, 'error')
+            }
+        }
+
+        // Test API endpoint
+        async function testAPI() {
+            try {
+                log('Testing admin API endpoint...')
+                const response = await fetch('/api/admin/submissions')
+                
+                if (response.ok) {
+                    const data = await response.json()
+                    document.getElementById('api-test').innerHTML = `<span class="success">✅ API working - Found ${data.length} submissions</span>`
+                    document.getElementById('submissions-data').innerHTML = `<pre>${JSON.stringify(data, null, 2)}</pre>`
+                    log(`API success: ${data.length} submissions found`)
+                } else {
+                    const errorText = await response.text()
+                    document.getElementById('api-test').innerHTML = `<span class="error">❌ API Error: ${response.status}</span>`
+                    document.getElementById('submissions-data').innerHTML = `<pre>Error: ${errorText}</pre>`
+                    log(`API error: ${response.status} - ${errorText}`, 'error')
+                }
+            } catch (error) {
+                document.getElementById('api-test').innerHTML = `<span class="error">❌ API Request Failed</span>`
+                document.getElementById('submissions-data').innerHTML = `<pre>Error: ${error.message}</pre>`
+                log(`API request failed: ${error.message}`, 'error')
+            }
+        }
+
+        // Run tests
+        testServer()
+        testAPI()
+
+        // Add some basic info
+        log(`Current URL: ${window.location.href}`)
+        log(`User Agent: ${navigator.userAgent}`)
+    </script>
+</body>
+</html>

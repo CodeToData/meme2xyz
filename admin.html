@@ -290,22 +290,41 @@
             const container = document.getElementById('submissions-container')
             
             if (submissions.length === 0) {
-                container.innerHTML = '<div class="loading">No submissions found.</div>'
+                container.innerHTML = `
+                    <div class="loading">
+                        📭 No submissions yet.<br>
+                        <small>Submissions will appear here as users upload memes.</small>
+                    </div>
+                `
                 return
             }
 
-            container.innerHTML = submissions.map(submission => {
+            // Show last 5 submissions, most recent first
+            const recentSubmissions = submissions.slice(0, 5)
+
+            container.innerHTML = `
+                <div style="margin-bottom: 1rem; color: rgba(255,255,255,0.8);">
+                    <strong>📸 Last ${recentSubmissions.length} Submission${recentSubmissions.length !== 1 ? 's' : ''}</strong>
+                </div>
+            ` + recentSubmissions.map(submission => {
                 const status = submission.approved === 1 ? 'approved' : 
                              submission.approved === -1 ? 'rejected' : 'pending'
                 
                 const statusBadge = submission.approved === 1 ? 'badge-approved' :
                                    submission.approved === -1 ? 'badge-rejected' : 'badge-pending'
 
-                const statusText = submission.approved === 1 ? 'Approved' :
-                                  submission.approved === -1 ? 'Rejected' : 'Pending'
+                const statusText = submission.approved === 1 ? 'Approved ✅' :
+                                  submission.approved === -1 ? 'Rejected ❌' : 'Pending ⏳'
+
+                const statusIcon = submission.approved === 1 ? '✅' :
+                                  submission.approved === -1 ? '❌' : '⏳'
 
                 return `
-                    <div class="submission-card ${status !== 'pending' ? 'status-' + status : ''}">
+                    <div class="submission-card ${status !== 'pending' ? 'status-' + status : ''}" style="position: relative;">
+                        <div style="position: absolute; top: 10px; right: 10px; font-size: 2rem; background: rgba(0,0,0,0.7); border-radius: 50%; width: 50px; height: 50px; display: flex; align-items: center; justify-content: center;">
+                            ${statusIcon}
+                        </div>
+                        
                         <img src="/uploads/${submission.filename}" 
                              alt="Submission" 
                              class="submission-image"
@@ -332,9 +351,15 @@
                                 <button class="btn btn-reject" onclick="updateSubmission(${submission.id}, -1)">
                                     ❌ Reject
                                 </button>
+                                <button class="btn" disabled style="opacity: 0.5;">
+                                    ✅ Already Approved
+                                </button>
                             ` : `
                                 <button class="btn btn-approve" onclick="updateSubmission(${submission.id}, 1)">
                                     ✅ Approve
+                                </button>
+                                <button class="btn" disabled style="opacity: 0.5;">
+                                    ❌ Already Rejected
                                 </button>
                             `}
                         </div>
