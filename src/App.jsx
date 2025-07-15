@@ -24,6 +24,7 @@ function App() {
   // Modal state for image viewer
   const [modalImage, setModalImage] = useState(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false)
   
   // Search state
   const [searchTerm, setSearchTerm] = useState('')
@@ -134,11 +135,17 @@ function App() {
     return cachedImageUrls.get(originalUrl) || originalUrl
   }
 
-  // Function to get the proper raw image URL (handles blob URLs correctly)
+  // Function to get the user-friendly raw image URL (always shows normal URL)
   const getRawImageUrl = (originalUrl) => {
+    // Always return the user-friendly URL format for display
+    return `${window.location.origin}${originalUrl}`
+  }
+
+  // Function to get the optimized URL for actually opening the image (uses cache when available)
+  const getOptimizedImageUrl = (originalUrl) => {
     const cachedUrl = getCachedImageUrl(originalUrl)
-    // If it's a blob URL, use it directly; otherwise, prepend the origin
-    return cachedUrl.startsWith('blob:') ? cachedUrl : `${window.location.origin}${cachedUrl}`
+    // Use cached blob URL if available for better performance, otherwise use original
+    return cachedUrl.startsWith('blob:') ? cachedUrl : `${window.location.origin}${originalUrl}`
   }
 
   // Function to filter images based on search term
@@ -164,8 +171,13 @@ function App() {
   const closeImageModal = () => {
     setIsModalOpen(false)
     setModalImage(null)
+    setIsSidebarOpen(false) // Reset sidebar when closing modal
     // Return to homepage (no hash or path)
     window.history.pushState(null, '', window.location.origin)
+  }
+
+  const toggleSidebar = () => {
+    setIsSidebarOpen(!isSidebarOpen)
   }
 
   // Handle ESC key to close modal
@@ -246,7 +258,7 @@ function App() {
     }
   }
 
-  // Function to fetch available images from the server
+  // Function to fetch available images from static JSON file
   const fetchAvailableImages = async () => {
     if (isInitializing) {
       return // Silently skip if already initializing
@@ -255,29 +267,29 @@ function App() {
     try {
       setIsInitializing(true)
       
-      // Start preloading default images immediately (don't wait for API)
+      // Start preloading default images immediately (don't wait for JSON)
       preloadImages(availableImages)
       
-      const response = await fetch('/api/images')
+      const response = await fetch('/images/images.json')
       
       if (response.ok) {
-        const apiImages = await response.json()
+        const jsonImages = await response.json()
         
-        // Merge API images with any that might not be in the default list
+        // Merge JSON images with any that might not be in the default list
         const imageMap = new Map()
         
         // Add default images first
         availableImages.forEach(img => imageMap.set(img.name, img))
         
-        // Add or update with API images
-        apiImages.forEach(img => imageMap.set(img.name, img))
+        // Add or update with JSON images
+        jsonImages.forEach(img => imageMap.set(img.name, img))
         
         const mergedImages = Array.from(imageMap.values()).sort((a, b) => a.name.localeCompare(b.name))
         setAvailableImages(mergedImages)
         
-        // Preload any new images from API
-        const newImages = apiImages.filter(apiImg => 
-          !availableImages.some(defaultImg => defaultImg.name === apiImg.name)
+        // Preload any new images from JSON
+        const newImages = jsonImages.filter(jsonImg => 
+          !availableImages.some(defaultImg => defaultImg.name === jsonImg.name)
         )
         if (newImages.length > 0) {
           preloadImages(newImages)
@@ -285,7 +297,7 @@ function App() {
       }
     } catch (error) {
       // Network error, but we already started preloading default images
-      console.log('API fetch failed, using default images')
+      console.log('JSON fetch failed, using default images')
     } finally {
       setIsInitializing(false)
     }
@@ -572,25 +584,17 @@ function App() {
                   ✕
                 </button>
                 
-                <div className="modal-header">
-                  <h3 className="modal-title">#{modalImage.name}</h3>
-                </div>
-                
-                <div className="modal-image-container">
-                  <img 
-                    src={getCachedImageUrl(modalImage.url)}
-                    alt={modalImage.name}
-                    className="modal-image"
-                    onError={(e) => {
-                      // Silently fallback to original URL
-                      if (e.target.src !== modalImage.url) {
-                        e.target.src = modalImage.url
-                      }
-                    }}
-                  />
-                </div>
-                
-                <div className="modal-footer">
+                <div className={`modal-sidebar ${isSidebarOpen ? 'open' : ''}`}>
+                  <button className="sidebar-toggle" onClick={toggleSidebar}>
+                    <span className={`sidebar-arrow ${isSidebarOpen ? 'open' : ''}`}>
+                      ➤
+                    </span>
+                  </button>
+                  
+                  <div className="modal-header">
+                    <h3 className="modal-title">#{modalImage.name}</h3>
+                  </div>
+                  
                   <div className="share-section">
                     <label htmlFor="share-link" className="share-label">
                       📋 Share this meme:
@@ -608,7 +612,7 @@ function App() {
                         className="copy-button"
                         onClick={copyImageLink}
                       >
-                        📋 Copy
+                        📋
                       </button>
                     </div>
                   </div>
@@ -630,12 +634,12 @@ function App() {
                         className="copy-raw-button"
                         onClick={copyRawImageLink}
                       >
-                        📋 Copy
+                        📋
                       </button>
                     </div>
                     <div style={{marginTop: '0.5rem'}}>
                       <a 
-                        href={getRawImageUrl(modalImage.url)}
+                        href={getOptimizedImageUrl(modalImage.url)}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="raw-image-text-link"
@@ -652,6 +656,20 @@ function App() {
                       </a>
                     </div>
                   </div>
+                </div>
+                
+                <div className="modal-image-container">
+                  <img 
+                    src={getCachedImageUrl(modalImage.url)}
+                    alt={modalImage.name}
+                    className="modal-image"
+                    onError={(e) => {
+                      // Silently fallback to original URL
+                      if (e.target.src !== modalImage.url) {
+                        e.target.src = modalImage.url
+                      }
+                    }}
+                  />
                 </div>
               </div>
             </div>

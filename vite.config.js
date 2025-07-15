@@ -5,16 +5,6 @@ import react from '@vitejs/plugin-react-swc' // Faster than regular React plugin
 export default defineConfig({
   plugins: [react()],
   server: {
-    proxy: {
-      '/api': {
-        target: 'http://localhost:3001',
-        changeOrigin: true
-      },
-      '/uploads': {
-        target: 'http://localhost:3001',
-        changeOrigin: true
-      }
-    },
     // Enable hardware acceleration
     hmr: {
       overlay: false

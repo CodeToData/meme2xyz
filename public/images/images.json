@@ -1,0 +1,32 @@
+[
+  {
+    "name": "lnc",
+    "filename": "lnc.png",
+    "extension": "png",
+    "url": "/images/lnc.png"
+  },
+  {
+    "name": "marx",
+    "filename": "marx.png",
+    "extension": "png",
+    "url": "/images/marx.png"
+  },
+  {
+    "name": "sorry",
+    "filename": "sorry.gif",
+    "extension": "gif",
+    "url": "/images/sorry.gif"
+  },
+  {
+    "name": "waiting",
+    "filename": "waiting.jpg",
+    "extension": "jpg",
+    "url": "/images/waiting.jpg"
+  },
+  {
+    "name": "whatmeme",
+    "filename": "whatmeme.png",
+    "extension": "png",
+    "url": "/images/whatmeme.png"
+  }
+]
