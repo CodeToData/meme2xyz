@@ -24,6 +24,10 @@ function App() {
   // Modal state for image viewer
   const [modalImage, setModalImage] = useState(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const [isModalLoading, setIsModalLoading] = useState(() => {
+    // Check for hash on initial load to prevent flash
+    return window.location.hash.length > 1
+  })
   
   // Search state
   const [searchTerm, setSearchTerm] = useState('')
@@ -176,6 +180,7 @@ function App() {
   const closeImageModal = () => {
     setIsModalOpen(false)
     setModalImage(null)
+    setIsModalLoading(false)
     // Return to homepage (no hash or path)
     window.history.pushState(null, '', window.location.origin)
   }
@@ -183,14 +188,14 @@ function App() {
   // Handle ESC key to close modal
   useEffect(() => {
     const handleEscKey = (event) => {
-      if (event.key === 'Escape' && isModalOpen) {
+      if (event.key === 'Escape' && (isModalOpen || isModalLoading)) {
         closeImageModal()
       }
     }
 
-    if (isModalOpen) {
+    if (isModalOpen || isModalLoading) {
       document.addEventListener('keydown', handleEscKey)
-      // Prevent body scroll when modal is open
+      // Prevent body scroll when modal is open or loading
       document.body.style.overflow = 'hidden'
     }
 
@@ -198,7 +203,7 @@ function App() {
       document.removeEventListener('keydown', handleEscKey)
       document.body.style.overflow = 'unset'
     }
-  }, [isModalOpen])
+  }, [isModalOpen, isModalLoading])
 
   const copyImageLink = async () => {
     if (modalImage) {
@@ -311,6 +316,11 @@ function App() {
       
       // Check if we have a hash URL first (like #lnc) - this takes priority
       if (hash) {
+        // Show loading overlay immediately for hash URLs
+        setIsModalLoading(true)
+        setIsModalOpen(false)
+        setModalImage(null)
+        
         const foundImage = await findImageWithExtension(hash)
         if (foundImage) {
           // Hash URL shows modal
@@ -318,12 +328,15 @@ function App() {
           if (imageObj) {
             setModalImage(imageObj)
             setIsModalOpen(true)
+            setIsModalLoading(false)
             // Clear the current image to show homepage with modal
             setCurrentImage(null)
             setActualImageFile(null)
             setImageError(false)
             setIsLoading(false)
             setImageLoaded(false)
+          } else {
+            setIsModalLoading(false)
           }
         } else {
           // Image not found for hash URL - show homepage with error modal or just homepage
@@ -334,6 +347,7 @@ function App() {
           setImageLoaded(false)
           setIsModalOpen(false)
           setModalImage(null)
+          setIsModalLoading(false)
         }
       }
       // Check if we have a direct path (like /lnc) - only if no hash
@@ -350,6 +364,7 @@ function App() {
           setImageLoaded(false)
           setIsModalOpen(false)
           setModalImage(null)
+          setIsModalLoading(false)
         } else {
           // Image not found
           setActualImageFile(null)
@@ -359,6 +374,7 @@ function App() {
           setCurrentImage(imageName)
           setIsModalOpen(false)
           setModalImage(null)
+          setIsModalLoading(false)
         }
       }
       // No path or hash - show homepage
@@ -370,6 +386,7 @@ function App() {
         setImageLoaded(false)
         setIsModalOpen(false)
         setModalImage(null)
+        setIsModalLoading(false)
       }
     }
 
@@ -465,212 +482,227 @@ function App() {
     )
   }
 
-  // Show homepage only when no hash is present
+  // Show homepage only when no hash is present and not loading modal
   return (
     <div className="app">
-      <div className="container">
-        <header className="header">
-          <h1 className="title">Meme 2 XYZ</h1>
-          <p className="subtitle">Direct image access via URL hash</p>
-        </header>
-        
-        <main className="main">
-          <div className="image-grid-section">
-            <h2>🎭 Browse Memes</h2>
+      {/* Modal Loading Overlay */}
+      {isModalLoading && (
+        <div className="image-modal-overlay" onClick={closeImageModal}>
+          <div className="modal-loading-container">
+            <div className="modal-loading-spinner">
+              <div className="spinner"></div>
+              <p>Loading image...</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Image Modal */}
+      {isModalOpen && modalImage && (
+        <div className="image-modal-overlay" onClick={closeImageModal}>
+          <div className="image-modal" onClick={(e) => e.stopPropagation()}>
+            <button className="modal-close-button" onClick={closeImageModal}>
+              ✕
+            </button>
             
-            {/* Search Section */}
-            <div className="search-section">
-              <div className="search-container">
-                <input
-                  type="text"
-                  placeholder="Search memes by name..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="search-input"
-                />
-                {searchTerm && (
-                  <button
-                    onClick={() => setSearchTerm('')}
-                    className="search-clear-button"
-                    title="Clear search"
+            <div className="modal-sidebar">
+              <div className="modal-header">
+                <h3 className="modal-title">#{removeFileExtension(modalImage.name)}</h3>
+              </div>
+              
+              <div className="share-section">
+                <label htmlFor="share-link" className="share-label">
+                  📋 Share this meme:
+                </label>
+                <div className="share-input-container">
+                  <input
+                    id="share-link"
+                    type="text"
+                    value={`${window.location.origin}/#${removeFileExtension(modalImage.name)}`}
+                    readOnly
+                    className="share-input"
+                    onClick={(e) => e.target.select()}
+                  />
+                  <button 
+                    className="copy-button"
+                    onClick={copyImageLink}
                   >
-                    ✕
+                    📋
                   </button>
-                )}
+                </div>
+              </div>
+              
+              <div className="share-section">
+                <label htmlFor="raw-image-link" className="share-label">
+                  🖼️ Raw image:
+                </label>
+                <div className="share-input-container">
+                  <input
+                    id="raw-image-link"
+                    type="text"
+                    value={getRawImageUrl(modalImage.url)}
+                    readOnly
+                    className="share-input"
+                    onClick={(e) => e.target.select()}
+                  />
+                  <button 
+                    className="copy-raw-button"
+                    onClick={copyRawImageLink}
+                  >
+                    📋
+                  </button>
+                </div>
+                <div style={{marginTop: '0.5rem'}}>
+                  <a 
+                    href={`${window.location.origin}/${removeFileExtension(modalImage.name)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="raw-image-text-link"
+                    style={{
+                      color: '#60a5fa',
+                      textDecoration: 'none',
+                      fontSize: '0.875rem',
+                      fontWeight: '500'
+                    }}
+                    onMouseOver={(e) => e.target.style.textDecoration = 'underline'}
+                    onMouseOut={(e) => e.target.style.textDecoration = 'none'}
+                  >
+                    🔗 Open image page in new tab
+                  </a>
+                </div>
               </div>
             </div>
             
-            <div className="image-grid-container">
-              {(() => {
-                const filteredImages = getFilteredImages()
-                
-                if (filteredImages.length === 0 && searchTerm) {
+            <div className="modal-image-container">
+              <img 
+                src={getCachedImageUrl(modalImage.url)}
+                alt={modalImage.name}
+                className="modal-image"
+                onError={(e) => {
+                  // Silently fallback to original URL
+                  if (e.target.src !== modalImage.url) {
+                    e.target.src = modalImage.url
+                  }
+                }}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Only show homepage content when not loading modal */}
+      {!isModalLoading && (
+        <div className="container">
+          <header className="header">
+            <h1 className="title">Meme 2 XYZ</h1>
+            <p className="subtitle">Direct image access via URL hash</p>
+          </header>
+          
+          <main className="main">
+            <div className="image-grid-section">
+              <h2>🎭 Browse Memes</h2>
+              
+              {/* Search Section */}
+              <div className="search-section">
+                <div className="search-container">
+                  <input
+                    type="text"
+                    placeholder="Search memes by name..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="search-input"
+                  />
+                  {searchTerm && (
+                    <button
+                      onClick={() => setSearchTerm('')}
+                      className="search-clear-button"
+                      title="Clear search"
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
+              </div>
+              
+              <div className="image-grid-container">
+                {(() => {
+                  const filteredImages = getFilteredImages()
+                  
+                  if (filteredImages.length === 0 && searchTerm) {
+                    return (
+                      <div style={{color: 'white', padding: '2rem', textAlign: 'center'}}>
+                        No memes found matching "{searchTerm}". Try a different search term.
+                      </div>
+                    )
+                  }
+                  
+                  if (filteredImages.length === 0) {
+                    return (
+                      <div style={{color: 'white', padding: '2rem', textAlign: 'center'}}>
+                        Loading images... If this persists, check console for errors.
+                      </div>
+                    )
+                  }
+                  
                   return (
-                    <div style={{color: 'white', padding: '2rem', textAlign: 'center'}}>
-                      No memes found matching "{searchTerm}". Try a different search term.
-                    </div>
-                  )
-                }
-                
-                if (filteredImages.length === 0) {
-                  return (
-                    <div style={{color: 'white', padding: '2rem', textAlign: 'center'}}>
-                      Loading images... If this persists, check console for errors.
-                    </div>
-                  )
-                }
-                
-                return (
-                  <div className="image-grid">
-                    {filteredImages.map((image) => (
-                      <div key={image.name} className="image-grid-item">
-                        <div 
-                          className="image-grid-link"
-                          onClick={() => openImageModal(image)}
-                          style={{ cursor: 'pointer' }}
-                        >
-                          <div className="image-preview">
-                            <img 
-                              src={getCachedImageUrl(image.url)} 
-                              alt={image.name}
-                              className="grid-thumbnail"
-                              loading="lazy"
-                              onError={(e) => {
-                                // Silently fallback to original URL if cached version fails
-                                if (e.target.src !== image.url) {
-                                  e.target.src = image.url
-                                }
-                              }}
-                            />
-                            <div className="image-hashtag-overlay">
-                              #{image.name}
+                    <div className="image-grid">
+                      {filteredImages.map((image) => (
+                        <div key={image.name} className="image-grid-item">
+                          <div 
+                            className="image-grid-link"
+                            onClick={() => openImageModal(image)}
+                            style={{ cursor: 'pointer' }}
+                          >
+                            <div className="image-preview">
+                              <img 
+                                src={getCachedImageUrl(image.url)} 
+                                alt={image.name}
+                                className="grid-thumbnail"
+                                loading="lazy"
+                                onError={(e) => {
+                                  // Silently fallback to original URL if cached version fails
+                                  if (e.target.src !== image.url) {
+                                    e.target.src = image.url
+                                  }
+                                }}
+                              />
+                              <div className="image-hashtag-overlay">
+                                #{image.name}
+                              </div>
                             </div>
                           </div>
                         </div>
-                      </div>
-                    ))}
-                  </div>
-                )
-              })()}
+                      ))}
+                    </div>
+                  )
+                })()}
+              </div>
             </div>
-          </div>
 
-          <div className="usage-section">
-            <h2>🖼️ How to Use</h2>
-            <div className="usage-card">
-              <p>Access images using two different URL patterns:</p>
-              
-              <p><strong>Modal popup view (on homepage):</strong></p>
-              <div className="url-format">
-                <code>meme2.xyz/#[image-name]</code>
-              </div>
-              <p>Example: <a href="/#whatmeme">meme2.xyz/#whatmeme</a></p>
-              
-              <p><strong>Full-page image view:</strong></p>
-              <div className="url-format">
-                <code>meme2.xyz/[image-name]</code>
-              </div>
-              <p>Example: <a href="/whatmeme">meme2.xyz/whatmeme</a></p>
-              
-              <p><em>Note: You can use filenames with or without extensions!</em></p>
-              <p><em>The system will automatically detect the correct file extension.</em></p>
-            </div>
-          </div>
-
-          {/* Image Modal */}
-          {isModalOpen && modalImage && (
-            <div className="image-modal-overlay" onClick={closeImageModal}>
-              <div className="image-modal" onClick={(e) => e.stopPropagation()}>
-                <button className="modal-close-button" onClick={closeImageModal}>
-                  ✕
-                </button>
+            <div className="usage-section">
+              <h2>🖼️ How to Use</h2>
+              <div className="usage-card">
+                <p>Access images using two different URL patterns:</p>
                 
-                <div className="modal-sidebar">
-                  <div className="modal-header">
-                    <h3 className="modal-title">#{removeFileExtension(modalImage.name)}</h3>
-                  </div>
-                  
-                  <div className="share-section">
-                    <label htmlFor="share-link" className="share-label">
-                      📋 Share this meme:
-                    </label>
-                    <div className="share-input-container">
-                      <input
-                        id="share-link"
-                        type="text"
-                        value={`${window.location.origin}/#${removeFileExtension(modalImage.name)}`}
-                        readOnly
-                        className="share-input"
-                        onClick={(e) => e.target.select()}
-                      />
-                      <button 
-                        className="copy-button"
-                        onClick={copyImageLink}
-                      >
-                        📋
-                      </button>
-                    </div>
-                  </div>
-                  
-                  <div className="share-section">
-                    <label htmlFor="raw-image-link" className="share-label">
-                      🖼️ Raw image:
-                    </label>
-                    <div className="share-input-container">
-                      <input
-                        id="raw-image-link"
-                        type="text"
-                        value={getRawImageUrl(modalImage.url)}
-                        readOnly
-                        className="share-input"
-                        onClick={(e) => e.target.select()}
-                      />
-                      <button 
-                        className="copy-raw-button"
-                        onClick={copyRawImageLink}
-                      >
-                        📋
-                      </button>
-                    </div>
-                    <div style={{marginTop: '0.5rem'}}>
-                      <a 
-                        href={`${window.location.origin}/${removeFileExtension(modalImage.name)}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="raw-image-text-link"
-                        style={{
-                          color: '#60a5fa',
-                          textDecoration: 'none',
-                          fontSize: '0.875rem',
-                          fontWeight: '500'
-                        }}
-                        onMouseOver={(e) => e.target.style.textDecoration = 'underline'}
-                        onMouseOut={(e) => e.target.style.textDecoration = 'none'}
-                      >
-                        🔗 Open image page in new tab
-                      </a>
-                    </div>
-                  </div>
+                <p><strong>Modal popup view (on homepage):</strong></p>
+                <div className="url-format">
+                  <code>meme2.xyz/#[image-name]</code>
                 </div>
+                <p>Example: <a href="/#whatmeme">meme2.xyz/#whatmeme</a></p>
                 
-                <div className="modal-image-container">
-                  <img 
-                    src={getCachedImageUrl(modalImage.url)}
-                    alt={modalImage.name}
-                    className="modal-image"
-                    onError={(e) => {
-                      // Silently fallback to original URL
-                      if (e.target.src !== modalImage.url) {
-                        e.target.src = modalImage.url
-                      }
-                    }}
-                  />
+                <p><strong>Full-page image view:</strong></p>
+                <div className="url-format">
+                  <code>meme2.xyz/[image-name]</code>
                 </div>
+                <p>Example: <a href="/whatmeme">meme2.xyz/whatmeme</a></p>
+                
+                <p><em>Note: You can use filenames with or without extensions!</em></p>
+                <p><em>The system will automatically detect the correct file extension.</em></p>
               </div>
             </div>
-          )}
-        </main>
-      </div>
+          </main>
+        </div>
+      )}
     </div>
   )
 }
