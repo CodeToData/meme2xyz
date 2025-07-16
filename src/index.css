@@ -6,6 +6,11 @@
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  background: rgba(0, 0, 0, 0.9);
+}
+
+html {
+  background: rgba(0, 0, 0, 0.9);
 }
 
 * {
@@ -18,8 +23,10 @@ body {
   margin: 0;
   min-height: 100vh;
   overflow-x: hidden;
+  background: rgba(0, 0, 0, 0.9);
 }
 
 #root {
   min-height: 100vh;
+  background: rgba(0, 0, 0, 0.9);
 }

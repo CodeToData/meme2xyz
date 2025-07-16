@@ -53,28 +53,11 @@ class ImageDiscoveryService {
 
   /**
    * Get fallback list of images when API is not available
-   * @returns {Array} Array of known images
+   * @returns {Array} Array of known images (empty since we rely on images.json)
    */
   getFallbackImages() {
-    const knownImages = [
-      'faust.jpeg',
-      'lnc.png', 
-      'locked.gif',
-      'marx.png',
-      'nuffsaid.jpg',
-      'shane.jpg',
-      'sorry.gif',
-      'ultrafrog.gif',
-      'unusual.png',
-      'waiting.jpg',
-      'whatmeme.png'
-    ]
-
-    return knownImages.map(imageName => ({
-      name: imageName,
-      url: `/images/${imageName}`,
-      lastModified: Date.now()
-    }))
+    // No hardcoded fallback images - rely entirely on images.json
+    return []
   }
 
   /**

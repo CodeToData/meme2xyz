@@ -301,12 +301,31 @@ app.get('/api/images', (req, res) => {
       console.log('Images directory does not exist')
       return res.json([])
     }
+
+    // Load exclusions list
+    let excludedFiles = []
+    try {
+      const exclusionsPath = path.join(imagesDir, 'exclusions.json')
+      if (fs.existsSync(exclusionsPath)) {
+        const exclusionsData = JSON.parse(fs.readFileSync(exclusionsPath, 'utf8'))
+        excludedFiles = exclusionsData.excludedFiles || []
+        console.log('Loaded exclusions:', excludedFiles)
+      }
+    } catch (error) {
+      console.warn('Could not load exclusions.json:', error.message)
+    }
     
     const files = fs.readdirSync(imagesDir)
     const imageExtensions = ['.png', '.jpg', '.jpeg', '.gif', '.webp', '.svg', '.bmp', '.ico', '.tiff', '.avif']
     
     const images = files
       .filter(file => {
+        // Skip if file is in exclusion list
+        if (excludedFiles.includes(file)) {
+          console.log(`Excluding file: ${file}`)
+          return false
+        }
+        
         const ext = path.extname(file).toLowerCase()
         const isImage = imageExtensions.includes(ext)
         
@@ -318,6 +337,12 @@ app.get('/api/images', (req, res) => {
             console.warn(`Skipping empty file: ${file}`)
             return false
           }
+          return isImage
+        } catch (error) {
+          console.warn(`Skipping corrupted file: ${file}`, error.message)
+          return false
+        }
+      })
           return isImage
         } catch (error) {
           console.warn(`Skipping corrupted file: ${file}`, error.message)

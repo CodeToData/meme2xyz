@@ -8,13 +8,7 @@ function App() {
   const [imageError, setImageError] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [imageLoaded, setImageLoaded] = useState(false)
-  const [availableImages, setAvailableImages] = useState([
-    // Default images that should be available immediately
-    { name: 'lnc', filename: 'lnc.png', extension: 'png', url: '/images/lnc.png' },
-    { name: 'whatmeme', filename: 'whatmeme.png', extension: 'png', url: '/images/whatmeme.png' },
-    { name: 'waiting', filename: 'waiting.jpg', extension: 'jpg', url: '/images/waiting.jpg' },
-    { name: 'sorry', filename: 'sorry.gif', extension: 'gif', url: '/images/sorry.gif' }
-  ])
+  const [availableImages, setAvailableImages] = useState([])
   
   // Track cached image blob URLs
   const [cachedImageUrls, setCachedImageUrls] = useState(new Map())
@@ -25,8 +19,9 @@ function App() {
   const [modalImage, setModalImage] = useState(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [isModalLoading, setIsModalLoading] = useState(() => {
-    // Check for hash on initial load to prevent flash
-    return window.location.hash.length > 1
+    // Check for hash on initial load to prevent flash - be more specific
+    const hash = window.location.hash.slice(1)
+    return hash.length > 0 && hash !== ''
   })
   
   // Search state
@@ -264,7 +259,7 @@ function App() {
     }
   }
 
-  // Function to fetch available images from static JSON file
+  // Function to fetch available images using dynamic discovery with exclusions
   const fetchAvailableImages = async () => {
     if (isInitializing) {
       return // Silently skip if already initializing
@@ -273,37 +268,85 @@ function App() {
     try {
       setIsInitializing(true)
       
-      // Start preloading default images immediately (don't wait for JSON)
-      preloadImages(availableImages)
+      // Fetch exclusion list
+      let excludedFiles = []
+      try {
+        const exclusionsResponse = await fetch('/images/exclusions.json')
+        if (exclusionsResponse.ok) {
+          const exclusionsData = await exclusionsResponse.json()
+          excludedFiles = exclusionsData.excludedFiles || []
+        }
+      } catch (error) {
+        console.log('No exclusions file found, proceeding without exclusions')
+      }
       
-      const response = await fetch('/images/images.json')
+      // Try to get image list from server API first
+      try {
+        const serverResponse = await fetch('/api/images')
+        if (serverResponse.ok) {
+          const serverImages = await serverResponse.json()
+          const filteredImages = serverImages
+            .filter(img => !excludedFiles.includes(img.filename))
+            .sort((a, b) => a.name.localeCompare(b.name))
+          
+          setAvailableImages(filteredImages)
+          preloadImages(filteredImages)
+          return
+        }
+      } catch (error) {
+        console.log('Server API not available, trying dynamic discovery')
+      }
       
-      if (response.ok) {
-        const jsonImages = await response.json()
-        
-        // Merge JSON images with any that might not be in the default list
-        const imageMap = new Map()
-        
-        // Add default images first
-        availableImages.forEach(img => imageMap.set(img.name, img))
-        
-        // Add or update with JSON images
-        jsonImages.forEach(img => imageMap.set(img.name, img))
-        
-        const mergedImages = Array.from(imageMap.values()).sort((a, b) => a.name.localeCompare(b.name))
-        setAvailableImages(mergedImages)
-        
-        // Preload any new images from JSON
-        const newImages = jsonImages.filter(jsonImg => 
-          !availableImages.some(defaultImg => defaultImg.name === jsonImg.name)
-        )
-        if (newImages.length > 0) {
-          preloadImages(newImages)
+      // Fallback: Try to discover images dynamically by testing common image files
+      const commonImageExtensions = ['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg']
+      const commonImageNames = [
+        'cnn', 'lnc', 'marx', 'shane', 'sorry', 'ultrafrog', 'waiting', 'whatmeme',
+        'logo', 'header', 'banner', 'hero', 'thumbnail', 'avatar', 'profile',
+        'meme1', 'meme2', 'meme3', 'funny', 'image1', 'image2', 'image3'
+      ]
+      
+      const discoveredImages = []
+      
+      for (const name of commonImageNames) {
+        for (const ext of commonImageExtensions) {
+          const filename = `${name}.${ext}`
+          
+          // Skip if in exclusion list
+          if (excludedFiles.includes(filename)) {
+            continue
+          }
+          
+          try {
+            // Test if image exists by trying to load it
+            await new Promise((resolve, reject) => {
+              const img = new Image()
+              img.onload = () => resolve()
+              img.onerror = () => reject()
+              img.src = `/images/${filename}`
+            })
+            
+            // If we get here, image exists
+            discoveredImages.push({
+              name: name,
+              filename: filename,
+              extension: ext,
+              url: `/images/${filename}`
+            })
+            break // Found this name, try next name
+          } catch {
+            // Image doesn't exist, try next extension
+            continue
+          }
         }
       }
+      
+      // Set discovered images
+      const sortedImages = discoveredImages.sort((a, b) => a.name.localeCompare(b.name))
+      setAvailableImages(sortedImages)
+      preloadImages(sortedImages)
+      
     } catch (error) {
-      // Network error, but we already started preloading default images
-      console.log('JSON fetch failed, using default images')
+      console.log('Image discovery failed:', error)
     } finally {
       setIsInitializing(false)
     }
@@ -316,8 +359,11 @@ function App() {
       
       // Check if we have a hash URL first (like #lnc) - this takes priority
       if (hash) {
-        // Show loading overlay immediately for hash URLs
-        setIsModalLoading(true)
+        // Show loading overlay immediately for hash URLs - don't clear it until modal is ready
+        if (!isModalLoading) {
+          setIsModalLoading(true)
+        }
+        // Immediately hide any existing modal content to prevent flash during transitions
         setIsModalOpen(false)
         setModalImage(null)
         
@@ -326,6 +372,7 @@ function App() {
           // Hash URL shows modal
           const imageObj = availableImages.find(img => img.name === hash)
           if (imageObj) {
+            // Atomic state update: set everything at once to prevent intermediate renders
             setModalImage(imageObj)
             setIsModalOpen(true)
             setIsModalLoading(false)
@@ -379,6 +426,7 @@ function App() {
       }
       // No path or hash - show homepage
       else {
+        // Ensure clean state when returning to homepage
         setCurrentImage(null)
         setActualImageFile(null)
         setImageError(false)
@@ -482,11 +530,10 @@ function App() {
     )
   }
 
-  // Show homepage only when no hash is present and not loading modal
-  return (
-    <div className="app">
-      {/* Modal Loading Overlay */}
-      {isModalLoading && (
+  // If we're loading a modal or have a modal open, don't render the main page to prevent flash
+  if (isModalLoading) {
+    return (
+      <div className="app">
         <div className="image-modal-overlay" onClick={closeImageModal}>
           <div className="modal-loading-container">
             <div className="modal-loading-spinner">
@@ -495,7 +542,13 @@ function App() {
             </div>
           </div>
         </div>
-      )}
+      </div>
+    )
+  }
+
+  // Show homepage only when no hash is present and not loading modal
+  return (
+    <div className="app">
 
       {/* Image Modal */}
       {isModalOpen && modalImage && (
