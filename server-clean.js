@@ -383,11 +383,28 @@ app.get('/api/approved-memes', (req, res) => {
   res.json(approvedMemes)
 })
 
-// Serve uploaded files
-app.use('/uploads', express.static(uploadsDir))
+// Serve uploaded files with cache headers
+app.use('/uploads', express.static(uploadsDir, {
+  maxAge: '7d', // Cache uploads for 7 days
+  etag: true,
+  lastModified: true
+}))
 
-// Serve public images
-app.use('/images', express.static(path.join(__dirname, 'public', 'images')))
+// Serve public images with aggressive caching
+app.use('/images', express.static(path.join(__dirname, 'public', 'images'), {
+  maxAge: '30d', // Cache images for 30 days
+  etag: true,
+  lastModified: true,
+  immutable: true
+}))
+
+// Serve thumbnails with aggressive caching
+app.use('/thumbnails', express.static(path.join(__dirname, 'public', 'thumbnails'), {
+  maxAge: '30d', // Cache thumbnails for 30 days
+  etag: true,
+  lastModified: true,
+  immutable: true
+}))
 
 // Admin panel route
 app.get('/admin', (req, res) => {

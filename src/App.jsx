@@ -95,32 +95,82 @@ function App() {
     return null
   }
 
-  // Function to preload and cache all images with progressive loading
+  // Function to preload and cache images with progressive loading strategy
   const preloadImages = async (images) => {
-    console.log('Starting image preload and caching...')
+    console.log('Starting progressive image loading...')
     const newCachedUrls = new Map(cachedImageUrls)
     
-    // Load images in parallel for faster initial display
-    const loadPromises = images.map(async (image) => {
-      try {
-        const cachedUrl = await imageCache.getImage(image.url)
-        newCachedUrls.set(image.url, cachedUrl)
-        console.log(`Cached: ${image.name}`)
-        
-        // Update the cache URLs immediately as each image loads
-        setCachedImageUrls(new Map(newCachedUrls))
-        
-        return { success: true, image: image.name }
-      } catch (error) {
-        // Silently fail and use original URL - no user-facing error
-        newCachedUrls.set(image.url, image.url)
-        setCachedImageUrls(new Map(newCachedUrls))
-        return { success: false, image: image.name, error }
-      }
+    // Strategy 1: Load small images first (thumbnails)
+    // Strategy 2: Batch loading to prevent overwhelming the browser
+    // Strategy 3: Priority loading for visible images
+    
+    const BATCH_SIZE = 3 // Load 3 images at a time
+    const batches = []
+    
+    // Sort images by estimated size (smaller files load faster)
+    const prioritizedImages = [...images].sort((a, b) => {
+      // Prioritize by extension (smaller formats first)
+      const sizeOrder = { 'webp': 1, 'jpg': 2, 'jpeg': 2, 'png': 3, 'gif': 4 }
+      const aSize = sizeOrder[a.extension] || 5
+      const bSize = sizeOrder[b.extension] || 5
+      return aSize - bSize
     })
     
-    // Wait for all images to complete (or fail)
-    await Promise.allSettled(loadPromises)
+    // Create batches
+    for (let i = 0; i < prioritizedImages.length; i += BATCH_SIZE) {
+      batches.push(prioritizedImages.slice(i, i + BATCH_SIZE))
+    }
+    
+    // Load batches sequentially, but images within each batch in parallel
+    for (let batchIndex = 0; batchIndex < batches.length; batchIndex++) {
+      const batch = batches[batchIndex]
+      console.log(`Loading batch ${batchIndex + 1}/${batches.length}:`, batch.map(img => img.name))
+      
+      const batchPromises = batch.map(async (image) => {
+        try {
+          // First try to load a thumbnail if available
+          const thumbnailUrl = `/thumbnails/${image.name}.jpg`
+          let cachedUrl
+          
+          try {
+            // Test if thumbnail exists
+            await new Promise((resolve, reject) => {
+              const img = new Image()
+              img.onload = () => resolve()
+              img.onerror = () => reject()
+              img.src = thumbnailUrl
+            })
+            // Thumbnail exists, use it for fast display
+            cachedUrl = thumbnailUrl
+            console.log(`Using thumbnail for fast loading: ${image.name}`)
+          } catch {
+            // No thumbnail, load original but with lower priority
+            cachedUrl = await imageCache.getImage(image.url)
+            console.log(`Loaded original: ${image.name}`)
+          }
+          
+          newCachedUrls.set(image.url, cachedUrl)
+          
+          // Update UI immediately as each image in the batch loads
+          setCachedImageUrls(new Map(newCachedUrls))
+          
+          return { success: true, image: image.name }
+        } catch (error) {
+          // Silently fail and use original URL
+          newCachedUrls.set(image.url, image.url)
+          setCachedImageUrls(new Map(newCachedUrls))
+          return { success: false, image: image.name, error }
+        }
+      })
+      
+      // Wait for current batch to complete before starting next batch
+      await Promise.allSettled(batchPromises)
+      
+      // Small delay between batches to prevent overwhelming mobile browsers
+      if (batchIndex < batches.length - 1) {
+        await new Promise(resolve => setTimeout(resolve, 100))
+      }
+    }
     
     // Final update to ensure all URLs are set
     setCachedImageUrls(newCachedUrls)
@@ -290,7 +340,11 @@ function App() {
             .sort((a, b) => a.name.localeCompare(b.name))
           
           setAvailableImages(filteredImages)
-          preloadImages(filteredImages)
+          
+          // Start preloading immediately but don't block UI
+          preloadImages(filteredImages).catch(error => {
+            console.log('Background preloading failed:', error)
+          })
           return
         }
       } catch (error) {
@@ -631,6 +685,10 @@ function App() {
                 src={getCachedImageUrl(modalImage.url)}
                 alt={modalImage.name}
                 className="modal-image"
+                onLoad={(e) => {
+                  // Add loaded class for smooth animation
+                  e.target.classList.add('loaded')
+                }}
                 onError={(e) => {
                   // Silently fallback to original URL
                   if (e.target.src !== modalImage.url) {
@@ -681,6 +739,17 @@ function App() {
                 {(() => {
                   const filteredImages = getFilteredImages()
                   
+                  if (isInitializing) {
+                    return (
+                      <div style={{color: 'white', padding: '2rem', textAlign: 'center'}}>
+                        <div className="loading-spinner">
+                          <div className="spinner"></div>
+                        </div>
+                        <p style={{marginTop: '1rem'}}>Discovering images...</p>
+                      </div>
+                    )
+                  }
+                  
                   if (filteredImages.length === 0 && searchTerm) {
                     return (
                       <div style={{color: 'white', padding: '2rem', textAlign: 'center'}}>
@@ -692,7 +761,7 @@ function App() {
                   if (filteredImages.length === 0) {
                     return (
                       <div style={{color: 'white', padding: '2rem', textAlign: 'center'}}>
-                        Loading images... If this persists, check console for errors.
+                        No images found. Try refreshing the page or check console for errors.
                       </div>
                     )
                   }
@@ -712,11 +781,25 @@ function App() {
                                 alt={image.name}
                                 className="grid-thumbnail"
                                 loading="lazy"
+                                decoding="async"
+                                style={{
+                                  backgroundColor: '#1a1a1a',
+                                  minHeight: '200px',
+                                  objectFit: 'cover'
+                                }}
                                 onError={(e) => {
-                                  // Silently fallback to original URL if cached version fails
-                                  if (e.target.src !== image.url) {
+                                  // Try thumbnail first, then fallback to original
+                                  const thumbnailUrl = `/thumbnails/${image.name}.jpg`
+                                  if (e.target.src !== thumbnailUrl && e.target.src !== image.url) {
+                                    e.target.src = thumbnailUrl
+                                  } else if (e.target.src === thumbnailUrl) {
                                     e.target.src = image.url
                                   }
+                                }}
+                                onLoad={(e) => {
+                                  // Smooth transition when image loads
+                                  e.target.style.transition = 'opacity 0.3s ease'
+                                  e.target.style.opacity = '1'
                                 }}
                               />
                               <div className="image-hashtag-overlay">
