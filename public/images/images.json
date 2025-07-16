@@ -28,5 +28,17 @@
     "filename": "whatmeme.png",
     "extension": "png",
     "url": "/images/whatmeme.png"
+  },
+  {
+    "name": "shane",
+    "filename": "shane.jpg",
+    "extension": "jpg",
+    "url": "/images/shane.jpg"
+  },
+  {
+    "name": "ultrafrog",
+    "filename": "ultrafrog.gif",
+    "extension": "gif",
+    "url": "/images/ultrafrog.gif"
   }
 ]
