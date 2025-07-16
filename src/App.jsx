@@ -610,24 +610,6 @@ function App() {
                         📋
                       </button>
                     </div>
-                    <div style={{marginTop: '0.5rem'}}>
-                      <a 
-                        href={`${window.location.origin}/#${removeFileExtension(modalImage.name)}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="raw-image-text-link"
-                        style={{
-                          color: '#60a5fa',
-                          textDecoration: 'none',
-                          fontSize: '0.875rem',
-                          fontWeight: '500'
-                        }}
-                        onMouseOver={(e) => e.target.style.textDecoration = 'underline'}
-                        onMouseOut={(e) => e.target.style.textDecoration = 'none'}
-                      >
-                        🔗 Open share link in new tab
-                      </a>
-                    </div>
                   </div>
                   
                   <div className="share-section">
