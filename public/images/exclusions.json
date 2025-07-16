@@ -1,0 +1,11 @@
+{
+  "excludedFiles": [
+    "meme-1752477327493-254178927.jpg",
+    "meme-1752477988952-80226879.jpg",
+    "meme-1752478265737-336275506.jpg", 
+    "meme-1752479458850-952817704.jpg",
+    "images.json",
+    "exclusions.json"
+  ],
+  "reason": "Auto-generated timestamp meme files and metadata files that should not be displayed in the image gallery"
+}

@@ -12,10 +12,22 @@
     "url": "/images/marx.png"
   },
   {
+    "name": "shane",
+    "filename": "shane.jpg",
+    "extension": "jpg",
+    "url": "/images/shane.jpg"
+  },
+  {
     "name": "sorry",
     "filename": "sorry.gif",
     "extension": "gif",
     "url": "/images/sorry.gif"
+  },
+  {
+    "name": "ultrafrog",
+    "filename": "ultrafrog.gif",
+    "extension": "gif",
+    "url": "/images/ultrafrog.gif"
   },
   {
     "name": "waiting",
@@ -28,17 +40,5 @@
     "filename": "whatmeme.png",
     "extension": "png",
     "url": "/images/whatmeme.png"
-  },
-  {
-    "name": "shane",
-    "filename": "shane.jpg",
-    "extension": "jpg",
-    "url": "/images/shane.jpg"
-  },
-  {
-    "name": "ultrafrog",
-    "filename": "ultrafrog.gif",
-    "extension": "gif",
-    "url": "/images/ultrafrog.gif"
   }
 ]
